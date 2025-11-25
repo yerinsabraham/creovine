@@ -91,7 +91,15 @@ export const ProjectProvider = ({ children }) => {
     const unsubscribe = onSnapshot(projectRef, (docSnap) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
-        setProjectData(data.phases || projectData);
+        // Merge phases with root-level metadata (primaryService, addOns, etc.)
+        const mergedData = {
+          ...(data.phases || {}),
+          primaryService: data.primaryService,
+          addOns: data.addOns,
+          serviceCategory: data.serviceCategory,
+          serviceName: data.serviceName
+        };
+        setProjectData(mergedData);
         setCurrentPhase(data.currentPhase || 1);
         setProjectId(docSnap.id);
       }
@@ -232,24 +240,17 @@ export const ProjectProvider = ({ children }) => {
   const updateProjectMetadata = async (updates) => {
     if (!currentUser) return;
 
-    const updatedProjectData = {
-      ...projectData,
-      ...updates
-    };
-
-    setProjectData(updatedProjectData);
-
-    // Save to Firestore
+    // Don't merge updates into projectData state (they're root-level metadata, not phase data)
+    // Just update Firestore with the metadata at root level
     const projectRef = doc(db, 'projects', `${currentUser.uid}_draft`);
     await setDoc(projectRef, {
       userId: currentUser.uid,
       userEmail: currentUser.email,
       userName: currentUser.displayName || currentUser.email,
-      phases: updatedProjectData,
       currentPhase,
       status: 'draft',
       updatedAt: serverTimestamp(),
-      ...updates // Also save at root level for easier querying
+      ...updates // Service metadata at root level
     }, { merge: true });
   };
 
