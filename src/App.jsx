@@ -91,70 +91,70 @@ function App() {
         <Route path="/chat/:expertId" element={<ExpertChatPage />} />
         
         {/* Landing Page Flow */}
-        <Route path="/onboarding/landingpage/step1" element={<LandingPageOnboardingStep1 />} />
-        <Route path="/onboarding/landingpage/step2" element={<LandingPageOnboardingStep2 />} />
-        <Route path="/onboarding/landingpage/step3" element={<LandingPageOnboardingStep3 />} />
+        <Route path="/onboarding/landingpage/step1" element={<ProtectedRoute><LandingPageOnboardingStep1 /></ProtectedRoute>} />
+        <Route path="/onboarding/landingpage/step2" element={<ProtectedRoute><LandingPageOnboardingStep2 /></ProtectedRoute>} />
+        <Route path="/onboarding/landingpage/step3" element={<ProtectedRoute><LandingPageOnboardingStep3 /></ProtectedRoute>} />
         
         {/* Frontend Development Flow */}
-        <Route path="/onboarding/frontend/step1" element={<FrontendStep1 />} />
-        <Route path="/onboarding/frontend/step2" element={<FrontendStep2 />} />
-        <Route path="/onboarding/frontend/step3" element={<FrontendStep3 />} />
-        <Route path="/onboarding/frontend/step4" element={<FrontendStep4 />} />
+        <Route path="/onboarding/frontend/step1" element={<ProtectedRoute><FrontendStep1 /></ProtectedRoute>} />
+        <Route path="/onboarding/frontend/step2" element={<ProtectedRoute><FrontendStep2 /></ProtectedRoute>} />
+        <Route path="/onboarding/frontend/step3" element={<ProtectedRoute><FrontendStep3 /></ProtectedRoute>} />
+        <Route path="/onboarding/frontend/step4" element={<ProtectedRoute><FrontendStep4 /></ProtectedRoute>} />
         
         {/* Backend Development Flow */}
-        <Route path="/onboarding/backend/step1" element={<BackendStep1 />} />
-        <Route path="/onboarding/backend/step2" element={<BackendStep2 />} />
-        <Route path="/onboarding/backend/step3" element={<BackendStep3 />} />
-        <Route path="/onboarding/backend/step4" element={<BackendStep4 />} />
+        <Route path="/onboarding/backend/step1" element={<ProtectedRoute><BackendStep1 /></ProtectedRoute>} />
+        <Route path="/onboarding/backend/step2" element={<ProtectedRoute><BackendStep2 /></ProtectedRoute>} />
+        <Route path="/onboarding/backend/step3" element={<ProtectedRoute><BackendStep3 /></ProtectedRoute>} />
+        <Route path="/onboarding/backend/step4" element={<ProtectedRoute><BackendStep4 /></ProtectedRoute>} />
         
         {/* UI/UX Design Flow */}
-        <Route path="/onboarding/design/step1" element={<DesignStep1 />} />
-        <Route path="/onboarding/design/step2" element={<DesignStep2 />} />
-        <Route path="/onboarding/design/step3" element={<DesignStep3 />} />
+        <Route path="/onboarding/design/step1" element={<ProtectedRoute><DesignStep1 /></ProtectedRoute>} />
+        <Route path="/onboarding/design/step2" element={<ProtectedRoute><DesignStep2 /></ProtectedRoute>} />
+        <Route path="/onboarding/design/step3" element={<ProtectedRoute><DesignStep3 /></ProtectedRoute>} />
         
         {/* Smart Contract Flow */}
-        <Route path="/onboarding/contract/step1" element={<ContractStep1 />} />
-        <Route path="/onboarding/contract/step2" element={<ContractStep2 />} />
-        <Route path="/onboarding/contract/step3" element={<ContractStep3 />} />
-        <Route path="/onboarding/contract/step4" element={<ContractStep4 />} />
+        <Route path="/onboarding/contract/step1" element={<ProtectedRoute><ContractStep1 /></ProtectedRoute>} />
+        <Route path="/onboarding/contract/step2" element={<ProtectedRoute><ContractStep2 /></ProtectedRoute>} />
+        <Route path="/onboarding/contract/step3" element={<ProtectedRoute><ContractStep3 /></ProtectedRoute>} />
+        <Route path="/onboarding/contract/step4" element={<ProtectedRoute><ContractStep4 /></ProtectedRoute>} />
         
         {/* Bug Fix Flow */}
-        <Route path="/onboarding/bugfix/step1" element={<BugfixStep1 />} />
-        <Route path="/onboarding/bugfix/step2" element={<BugfixStep2 />} />
+        <Route path="/onboarding/bugfix/step1" element={<ProtectedRoute><BugfixStep1 /></ProtectedRoute>} />
+        <Route path="/onboarding/bugfix/step2" element={<ProtectedRoute><BugfixStep2 /></ProtectedRoute>} />
         
         {/* API Integration Flow */}
-        <Route path="/onboarding/api/step1" element={<ApiStep1 />} />
-        <Route path="/onboarding/api/step2" element={<ApiStep2 />} />
-        <Route path="/onboarding/api/step3" element={<ApiStep3 />} />
+        <Route path="/onboarding/api/step1" element={<ProtectedRoute><ApiStep1 /></ProtectedRoute>} />
+        <Route path="/onboarding/api/step2" element={<ProtectedRoute><ApiStep2 /></ProtectedRoute>} />
+        <Route path="/onboarding/api/step3" element={<ProtectedRoute><ApiStep3 /></ProtectedRoute>} />
         
         {/* QR Code System Flow */}
-        <Route path="/onboarding/qrcode/step1" element={<QRCodeStep1 />} />
-        <Route path="/onboarding/qrcode/step2" element={<QRCodeStep2 />} />
-        <Route path="/onboarding/qrcode/step3" element={<QRCodeStep3 />} />
+        <Route path="/onboarding/qrcode/step1" element={<ProtectedRoute><QRCodeStep1 /></ProtectedRoute>} />
+        <Route path="/onboarding/qrcode/step2" element={<ProtectedRoute><QRCodeStep2 /></ProtectedRoute>} />
+        <Route path="/onboarding/qrcode/step3" element={<ProtectedRoute><QRCodeStep3 /></ProtectedRoute>} />
         
         {/* Database Setup Flow */}
-        <Route path="/onboarding/database/step1" element={<DatabaseStep1 />} />
-        <Route path="/onboarding/database/step2" element={<DatabaseStep2 />} />
-        <Route path="/onboarding/database/step3" element={<DatabaseStep3 />} />
+        <Route path="/onboarding/database/step1" element={<ProtectedRoute><DatabaseStep1 /></ProtectedRoute>} />
+        <Route path="/onboarding/database/step2" element={<ProtectedRoute><DatabaseStep2 /></ProtectedRoute>} />
+        <Route path="/onboarding/database/step3" element={<ProtectedRoute><DatabaseStep3 /></ProtectedRoute>} />
         
         {/* Authentication Flow */}
-        <Route path="/onboarding/auth/step1" element={<AuthStep1 />} />
-        <Route path="/onboarding/auth/step2" element={<AuthStep2 />} />
-        <Route path="/onboarding/auth/step3" element={<AuthStep3 />} />
+        <Route path="/onboarding/auth/step1" element={<ProtectedRoute><AuthStep1 /></ProtectedRoute>} />
+        <Route path="/onboarding/auth/step2" element={<ProtectedRoute><AuthStep2 /></ProtectedRoute>} />
+        <Route path="/onboarding/auth/step3" element={<ProtectedRoute><AuthStep3 /></ProtectedRoute>} />
         
         {/* Payment Integration Flow */}
-        <Route path="/onboarding/payment/step1" element={<PaymentStep1 />} />
-        <Route path="/onboarding/payment/step2" element={<PaymentStep2 />} />
-        <Route path="/onboarding/payment/step3" element={<PaymentStep3 />} />
+        <Route path="/onboarding/payment/step1" element={<ProtectedRoute><PaymentStep1 /></ProtectedRoute>} />
+        <Route path="/onboarding/payment/step2" element={<ProtectedRoute><PaymentStep2 /></ProtectedRoute>} />
+        <Route path="/onboarding/payment/step3" element={<ProtectedRoute><PaymentStep3 /></ProtectedRoute>} />
         
         {/* Deployment Help Flow */}
-        <Route path="/onboarding/deployment/step1" element={<DeploymentStep1 />} />
-        <Route path="/onboarding/deployment/step2" element={<DeploymentStep2 />} />
+        <Route path="/onboarding/deployment/step1" element={<ProtectedRoute><DeploymentStep1 /></ProtectedRoute>} />
+        <Route path="/onboarding/deployment/step2" element={<ProtectedRoute><DeploymentStep2 /></ProtectedRoute>} />
         
         {/* Code Refactoring Flow */}
-        <Route path="/onboarding/refactor/step1" element={<RefactorStep1 />} />
-        <Route path="/onboarding/refactor/step2" element={<RefactorStep2 />} />
-        <Route path="/onboarding/refactor/step3" element={<RefactorStep3 />} />
+        <Route path="/onboarding/refactor/step1" element={<ProtectedRoute><RefactorStep1 /></ProtectedRoute>} />
+        <Route path="/onboarding/refactor/step2" element={<ProtectedRoute><RefactorStep2 /></ProtectedRoute>} />
+        <Route path="/onboarding/refactor/step3" element={<ProtectedRoute><RefactorStep3 /></ProtectedRoute>} />
         
         <Route 
           path="/admin" 

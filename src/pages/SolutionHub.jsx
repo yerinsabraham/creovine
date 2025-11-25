@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FaCheck } from 'react-icons/fa';
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { db } from '../config/firebase';
 import { serviceCategories } from '../config/serviceCategories';
 import { useMediaQuery } from '../hooks/useMediaQuery';
 import { useProject } from '../context/ProjectContext';
@@ -13,7 +15,7 @@ const SolutionHub = () => {
   const navigate = useNavigate();
   const isMobile = useMediaQuery('(max-width: 768px)');
   const { currentUser, signInWithGoogle, login, signup } = useAuth();
-  const { projectData, updatePhaseData } = useProject();
+  const { projectData, updatePhaseData, updateProjectMetadata } = useProject();
   
   // Auth modal states
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -23,6 +25,8 @@ const SolutionHub = () => {
   const [authPassword, setAuthPassword] = useState('');
   const [authName, setAuthName] = useState('');
   const [authError, setAuthError] = useState('');
+  const [showContinueModal, setShowContinueModal] = useState(false);
+  const [existingProject, setExistingProject] = useState(null);
   
   // Multi-select state - Load from projectData or localStorage
   const [primaryService, setPrimaryService] = useState(() => {
@@ -79,11 +83,13 @@ const SolutionHub = () => {
     setAddOns(newAddOns);
 
     // Save to Firestore immediately
-    await updatePhaseData('primaryService', newPrimaryService);
-    await updatePhaseData('addOns', newAddOns);
-    if (newPrimaryService) {
-      await updatePhaseData('serviceCategory', newPrimaryService.id);
-      await updatePhaseData('serviceName', newPrimaryService.name);
+    if (currentUser) {
+      await updateProjectMetadata({
+        primaryService: newPrimaryService,
+        addOns: newAddOns,
+        serviceCategory: newPrimaryService?.id || null,
+        serviceName: newPrimaryService?.name || null
+      });
     }
   };
 
@@ -98,10 +104,14 @@ const SolutionHub = () => {
     setAddOns(newAddOns);
 
     // Save to Firestore immediately
-    await updatePhaseData('primaryService', category);
-    await updatePhaseData('addOns', newAddOns);
-    await updatePhaseData('serviceCategory', category.id);
-    await updatePhaseData('serviceName', category.name);
+    if (currentUser) {
+      await updateProjectMetadata({
+        primaryService: category,
+        addOns: newAddOns,
+        serviceCategory: category.id,
+        serviceName: category.name
+      });
+    }
   };
 
   const handleContinue = async () => {
@@ -116,16 +126,31 @@ const SolutionHub = () => {
       return;
     }
 
+    // Check for existing incomplete project
+    if (projectData?.primaryService && projectData.primaryService.id !== primaryService.id) {
+      // User has an existing project with different service
+      setExistingProject(projectData);
+      setShowContinueModal(true);
+      return;
+    }
+
+    // Proceed with new/same selection
+    await proceedWithSelection();
+  };
+
+  const proceedWithSelection = async () => {
     try {
       // Save selections to project context
-      await updatePhaseData('serviceCategory', primaryService.id);
-      await updatePhaseData('serviceName', primaryService.name);
-      await updatePhaseData('primaryService', {
-        id: primaryService.id,
-        name: primaryService.name,
-        route: primaryService.route
+      await updateProjectMetadata({
+        serviceCategory: primaryService.id,
+        serviceName: primaryService.name,
+        primaryService: {
+          id: primaryService.id,
+          name: primaryService.name,
+          route: primaryService.route
+        },
+        addOns: addOns.map(a => ({ id: a.id, name: a.name, route: a.route }))
       });
-      await updatePhaseData('addOns', addOns.map(a => ({ id: a.id, name: a.name, route: a.route })));
 
       // Clear pending service from localStorage
       localStorage.removeItem('pendingService');
@@ -138,6 +163,41 @@ const SolutionHub = () => {
     }
   };
 
+  const handleContinueExisting = async () => {
+    // Continue with existing project - navigate to where they left off
+    setShowContinueModal(false);
+    if (existingProject?.primaryService?.route) {
+      navigate(existingProject.primaryService.route);
+    }
+  };
+
+  const handleStartFresh = async () => {
+    // Clear all existing project data and start fresh
+    setShowContinueModal(false);
+    
+    try {
+      // Clear project data in Firestore
+      if (currentUser) {
+        const projectRef = doc(db, 'projects', `${currentUser.uid}_draft`);
+        await setDoc(projectRef, {
+          userId: currentUser.uid,
+          userEmail: currentUser.email,
+          userName: currentUser.displayName || currentUser.email,
+          phases: {},
+          currentPhase: 1,
+          status: 'draft',
+          updatedAt: serverTimestamp()
+        });
+      }
+      
+      // Proceed with new selection
+      await proceedWithSelection();
+    } catch (error) {
+      console.error('Error clearing project:', error);
+      alert('Error starting fresh project. Please try again.');
+    }
+  };
+
   const handleGoogleSignIn = async () => {
     setAuthLoading(true);
     setAuthError('');
@@ -145,14 +205,16 @@ const SolutionHub = () => {
       await signInWithGoogle();
       
       // Save selections after successful login
-      await updatePhaseData('serviceCategory', primaryService.id);
-      await updatePhaseData('serviceName', primaryService.name);
-      await updatePhaseData('primaryService', {
-        id: primaryService.id,
-        name: primaryService.name,
-        route: primaryService.route
+      await updateProjectMetadata({
+        serviceCategory: primaryService.id,
+        serviceName: primaryService.name,
+        primaryService: {
+          id: primaryService.id,
+          name: primaryService.name,
+          route: primaryService.route
+        },
+        addOns: addOns.map(a => ({ id: a.id, name: a.name, route: a.route }))
       });
-      await updatePhaseData('addOns', addOns.map(a => ({ id: a.id, name: a.name, route: a.route })));
 
       // Clear pending and close modal
       localStorage.removeItem('pendingService');
@@ -186,14 +248,16 @@ const SolutionHub = () => {
       }
       
       // Save selections after successful login
-      await updatePhaseData('serviceCategory', primaryService.id);
-      await updatePhaseData('serviceName', primaryService.name);
-      await updatePhaseData('primaryService', {
-        id: primaryService.id,
-        name: primaryService.name,
-        route: primaryService.route
+      await updateProjectMetadata({
+        serviceCategory: primaryService.id,
+        serviceName: primaryService.name,
+        primaryService: {
+          id: primaryService.id,
+          name: primaryService.name,
+          route: primaryService.route
+        },
+        addOns: addOns.map(a => ({ id: a.id, name: a.name, route: a.route }))
       });
-      await updatePhaseData('addOns', addOns.map(a => ({ id: a.id, name: a.name, route: a.route })));
 
       // Clear pending and close modal
       localStorage.removeItem('pendingService');
@@ -836,6 +900,140 @@ const SolutionHub = () => {
                 >
                   Cancel
                 </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Project Continuation Modal */}
+      <AnimatePresence>
+        {showContinueModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setShowContinueModal(false)}
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(0, 0, 0, 0.8)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 1000,
+              padding: '20px'
+            }}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                backgroundColor: '#15293A',
+                borderRadius: '24px',
+                padding: isMobile ? '32px 24px' : '48px',
+                maxWidth: '500px',
+                width: '100%',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5)'
+              }}
+            >
+              <div style={{ textAlign: 'center' }}>
+                <div style={{
+                  fontSize: '48px',
+                  marginBottom: '24px'
+                }}>
+                  🤔
+                </div>
+                
+                <h2 style={{
+                  fontSize: isMobile ? '24px' : '28px',
+                  fontWeight: '800',
+                  color: '#FFFFFF',
+                  marginBottom: '16px'
+                }}>
+                  Continue Existing Project?
+                </h2>
+                
+                <p style={{
+                  fontSize: '15px',
+                  color: 'rgba(255, 255, 255, 0.7)',
+                  marginBottom: '12px',
+                  lineHeight: '1.6'
+                }}>
+                  You have an incomplete project: <strong style={{ color: '#29BD98' }}>{existingProject?.primaryService?.name}</strong>
+                </p>
+
+                <p style={{
+                  fontSize: '14px',
+                  color: 'rgba(255, 255, 255, 0.5)',
+                  marginBottom: '32px',
+                  lineHeight: '1.5'
+                }}>
+                  Would you like to continue where you left off, or start a fresh project with <strong style={{ color: '#29BD98' }}>{primaryService?.name}</strong>?
+                </p>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={handleContinueExisting}
+                    style={{
+                      width: '100%',
+                      backgroundColor: '#29BD98',
+                      color: '#FFFFFF',
+                      border: 'none',
+                      borderRadius: '12px',
+                      padding: '16px 24px',
+                      fontSize: '16px',
+                      fontWeight: '600',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Continue Existing Project
+                  </motion.button>
+
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={handleStartFresh}
+                    style={{
+                      width: '100%',
+                      backgroundColor: 'rgba(239, 68, 68, 0.15)',
+                      color: '#FCA5A5',
+                      border: '1px solid rgba(239, 68, 68, 0.3)',
+                      borderRadius: '12px',
+                      padding: '16px 24px',
+                      fontSize: '16px',
+                      fontWeight: '600',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Start Fresh (Clear Existing)
+                  </motion.button>
+
+                  <button
+                    onClick={() => setShowContinueModal(false)}
+                    style={{
+                      backgroundColor: 'transparent',
+                      color: 'rgba(255, 255, 255, 0.6)',
+                      border: '1px solid rgba(255, 255, 255, 0.2)',
+                      borderRadius: '12px',
+                      padding: '12px 24px',
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      cursor: 'pointer',
+                      width: '100%'
+                    }}
+                  >
+                    Cancel
+                  </button>
+                </div>
               </div>
             </motion.div>
           </motion.div>

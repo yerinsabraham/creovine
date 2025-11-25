@@ -228,6 +228,31 @@ export const ProjectProvider = ({ children }) => {
     return allServices.every(service => completedIds.includes(service.id));
   };
 
+  // Update root-level project data (for service selections, etc.)
+  const updateProjectMetadata = async (updates) => {
+    if (!currentUser) return;
+
+    const updatedProjectData = {
+      ...projectData,
+      ...updates
+    };
+
+    setProjectData(updatedProjectData);
+
+    // Save to Firestore
+    const projectRef = doc(db, 'projects', `${currentUser.uid}_draft`);
+    await setDoc(projectRef, {
+      userId: currentUser.uid,
+      userEmail: currentUser.email,
+      userName: currentUser.displayName || currentUser.email,
+      phases: updatedProjectData,
+      currentPhase,
+      status: 'draft',
+      updatedAt: serverTimestamp(),
+      ...updates // Also save at root level for easier querying
+    }, { merge: true });
+  };
+
   // Submit project
   const submitProject = async (finalData) => {
     if (!currentUser) return;
@@ -259,6 +284,7 @@ export const ProjectProvider = ({ children }) => {
     loading,
     updatePhaseData,
     updateProjectData: updatePhaseData, // Alias for backward compatibility
+    updateProjectMetadata,
     goToPhase,
     submitProject,
     markServiceComplete,
