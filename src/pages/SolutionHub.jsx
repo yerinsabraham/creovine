@@ -49,6 +49,17 @@ const SolutionHub = () => {
     return projectData?.addOns || [];
   });
 
+  // Helper function to serialize service object for Firestore (remove icon function)
+  const serializeService = (service) => {
+    if (!service) return null;
+    return {
+      id: service.id,
+      name: service.name,
+      route: service.route,
+      color: service.color
+    };
+  };
+
   const handleServiceClick = async (category) => {
     const isCurrentlyPrimary = primaryService?.id === category.id;
     const isCurrentlyAddOn = addOns.some(a => a.id === category.id);
@@ -85,8 +96,8 @@ const SolutionHub = () => {
     // Save to Firestore immediately
     if (currentUser) {
       await updateProjectMetadata({
-        primaryService: newPrimaryService,
-        addOns: newAddOns,
+        primaryService: serializeService(newPrimaryService),
+        addOns: newAddOns.map(serializeService),
         serviceCategory: newPrimaryService?.id || null,
         serviceName: newPrimaryService?.name || null
       });
@@ -106,8 +117,8 @@ const SolutionHub = () => {
     // Save to Firestore immediately
     if (currentUser) {
       await updateProjectMetadata({
-        primaryService: category,
-        addOns: newAddOns,
+        primaryService: serializeService(category),
+        addOns: newAddOns.map(serializeService),
         serviceCategory: category.id,
         serviceName: category.name
       });
@@ -144,12 +155,8 @@ const SolutionHub = () => {
       await updateProjectMetadata({
         serviceCategory: primaryService.id,
         serviceName: primaryService.name,
-        primaryService: {
-          id: primaryService.id,
-          name: primaryService.name,
-          route: primaryService.route
-        },
-        addOns: addOns.map(a => ({ id: a.id, name: a.name, route: a.route }))
+        primaryService: serializeService(primaryService),
+        addOns: addOns.map(serializeService)
       });
 
       // Clear pending service from localStorage
@@ -208,12 +215,8 @@ const SolutionHub = () => {
       await updateProjectMetadata({
         serviceCategory: primaryService.id,
         serviceName: primaryService.name,
-        primaryService: {
-          id: primaryService.id,
-          name: primaryService.name,
-          route: primaryService.route
-        },
-        addOns: addOns.map(a => ({ id: a.id, name: a.name, route: a.route }))
+        primaryService: serializeService(primaryService),
+        addOns: addOns.map(serializeService)
       });
 
       // Clear pending and close modal
@@ -251,12 +254,8 @@ const SolutionHub = () => {
       await updateProjectMetadata({
         serviceCategory: primaryService.id,
         serviceName: primaryService.name,
-        primaryService: {
-          id: primaryService.id,
-          name: primaryService.name,
-          route: primaryService.route
-        },
-        addOns: addOns.map(a => ({ id: a.id, name: a.name, route: a.route }))
+        primaryService: serializeService(primaryService),
+        addOns: addOns.map(serializeService)
       });
 
       // Clear pending and close modal
