@@ -81,11 +81,11 @@ const SolutionHub = () => {
     } else {
       // New selection
       if (!primaryService) {
-        // No primary yet: this becomes primary
-        newPrimaryService = category;
+        // No primary yet: this becomes primary (serialize to remove icon)
+        newPrimaryService = serializeService(category);
       } else {
-        // Already have primary: this becomes add-on
-        newAddOns = [...addOns, category];
+        // Already have primary: this becomes add-on (serialize to remove icon)
+        newAddOns = [...addOns, serializeService(category)];
       }
     }
 
