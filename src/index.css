@@ -1,0 +1,42 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Poppins', sans-serif;
+  background-color: #15293A;
+  color: #FFFFFF;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+/* Global responsive adjustments for onboarding pages */
+@media (max-width: 768px) {
+  /* Make flex containers stack on mobile */
+  .onboarding-content {
+    flex-direction: column !important;
+    padding: 24px 16px 120px !important;
+  }
+  
+  /* Ensure inputs and textareas are properly sized */
+  input, textarea, select {
+    font-size: 16px !important; /* Prevents iOS zoom on focus */
+  }
+  
+  /* Better touch targets */
+  button {
+    min-height: 44px;
+  }
+}

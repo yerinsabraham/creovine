@@ -1,0 +1,80 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // Helper function to check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Helper function to check if file is owned by user
+    function isOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Helper function to check if user is admin
+    function isAdmin() {
+      return request.auth != null && request.auth.token.email == 'yerinssaibs@gmail.com';
+    }
+    
+    // Helper function to validate file size (10MB max)
+    function isValidSize() {
+      return request.resource.size < 10 * 1024 * 1024;
+    }
+    
+    // Helper function to validate image file types
+    function isValidImageType() {
+      return request.resource.contentType.matches('image/.*');
+    }
+    
+    // Helper function to validate document file types
+    function isValidDocumentType() {
+      return request.resource.contentType.matches('image/.*') ||
+             request.resource.contentType.matches('application/pdf') ||
+             request.resource.contentType.matches('application/msword') ||
+             request.resource.contentType.matches('application/vnd.openxmlformats-officedocument.*') ||
+             request.resource.contentType.matches('text/plain');
+    }
+    
+    // Logo uploads - users can upload their own logos
+    match /logos/{userId}/{fileName} {
+      // Users can read their own logos
+      allow read: if isAuthenticated() && isOwner(userId);
+      
+      // Admin can read all logos
+      allow read: if isAdmin();
+      
+      // Users can write their own logos (with validation)
+      allow write: if isAuthenticated() && 
+                      isOwner(userId) && 
+                      isValidSize() && 
+                      isValidImageType();
+      
+      // Users can delete their own logos
+      allow delete: if isAuthenticated() && isOwner(userId);
+    }
+    
+    // Document uploads - users can upload project documents
+    match /documents/{userId}/{fileName} {
+      // Users can read their own documents
+      allow read: if isAuthenticated() && isOwner(userId);
+      
+      // Admin can read all documents
+      allow read: if isAdmin();
+      
+      // Users can write their own documents (with validation)
+      allow write: if isAuthenticated() && 
+                      isOwner(userId) && 
+                      isValidSize() && 
+                      isValidDocumentType();
+      
+      // Users can delete their own documents
+      allow delete: if isAuthenticated() && isOwner(userId);
+    }
+    
+    // Default deny all other access
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

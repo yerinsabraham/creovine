@@ -1,0 +1,289 @@
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import { useProject } from '../context/ProjectContext';
+import { useIsMobile } from '../hooks/useMediaQuery';
+import { formatCurrency } from '../utils/pricingCalculator';
+
+const CheckoutPage = () => {
+  const { projectData, submitProject } = useProject();
+  const [loading, setLoading] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState('stripe');
+  const navigate = useNavigate();
+  const isMobile = useIsMobile();
+  
+  const estimate = projectData?.phases?.estimate;
+
+  const handleCheckout = async () => {
+    setLoading(true);
+    
+    try {
+      // Submit project first
+      await submitProject();
+      
+      // Simulate payment processing
+      // In production, integrate with Stripe/Paystack APIs
+      setTimeout(() => {
+        navigate('/success', {
+          state: {
+            paid: true,
+            amount: estimate?.total,
+            paymentMethod
+          }
+        });
+      }, 2000);
+    } catch (error) {
+      console.error('Checkout error:', error);
+      alert('Payment failed. Please try again.');
+      setLoading(false);
+    }
+  };
+
+  if (!estimate) {
+    return (
+      <div style={{
+        minHeight: '100vh',
+        backgroundColor: '#0F1C2E',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        color: '#FFFFFF'
+      }}>
+        <div>
+          <div style={{ fontSize: '48px', marginBottom: '16px', textAlign: 'center' }}>⚠️</div>
+          <p style={{ fontSize: '18px' }}>No estimate found. Please go back to the quote page.</p>
+          <button
+            onClick={() => navigate('/quote')}
+            style={{
+              marginTop: '24px',
+              backgroundColor: '#29BD98',
+              color: '#FFFFFF',
+              border: 'none',
+              borderRadius: '8px',
+              padding: '12px 24px',
+              cursor: 'pointer'
+            }}
+          >
+            Go to Quote
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{
+      minHeight: '100vh',
+      backgroundColor: '#0F1C2E',
+      padding: isMobile ? '40px 20px' : '60px 40px'
+    }}>
+      <div style={{ maxWidth: '700px', margin: '0 auto' }}>
+        
+        {/* Header */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          style={{ textAlign: 'center', marginBottom: '48px' }}
+        >
+          <h1 style={{
+            fontSize: isMobile ? '32px' : '48px',
+            fontWeight: '800',
+            color: '#FFFFFF',
+            marginBottom: '16px'
+          }}>
+            Checkout
+          </h1>
+          <p style={{
+            fontSize: '16px',
+            color: 'rgba(255, 255, 255, 0.7)'
+          }}>
+            Complete your payment to start your project
+          </p>
+        </motion.div>
+
+        {/* Order Summary */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          style={{
+            backgroundColor: '#15293A',
+            borderRadius: '16px',
+            padding: isMobile ? '24px 20px' : '32px',
+            marginBottom: '24px',
+            border: '1px solid rgba(255, 255, 255, 0.1)'
+          }}
+        >
+          <h3 style={{
+            fontSize: '18px',
+            fontWeight: '700',
+            color: '#FFFFFF',
+            marginBottom: '20px'
+          }}>
+            Order Summary
+          </h3>
+          
+          {estimate.breakdown.map((item, index) => (
+            <div
+              key={index}
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                padding: '12px 0',
+                borderBottom: index < estimate.breakdown.length - 1 ? '1px solid rgba(255, 255, 255, 0.1)' : 'none'
+              }}
+            >
+              <span style={{ color: 'rgba(255, 255, 255, 0.8)', fontSize: '15px' }}>
+                {item.serviceName}
+              </span>
+              <span style={{ color: '#FFFFFF', fontSize: '15px', fontWeight: '600' }}>
+                {formatCurrency(item.price)}
+              </span>
+            </div>
+          ))}
+          
+          {estimate.discount > 0 && (
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              padding: '12px 0',
+              borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+              marginTop: '12px'
+            }}>
+              <span style={{ color: '#29BD98', fontSize: '15px' }}>
+                Discount
+              </span>
+              <span style={{ color: '#29BD98', fontSize: '15px', fontWeight: '600' }}>
+                -{formatCurrency(estimate.discount)}
+              </span>
+            </div>
+          )}
+          
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            padding: '20px 0 0 0',
+            borderTop: '2px solid rgba(255, 255, 255, 0.2)',
+            marginTop: '12px'
+          }}>
+            <span style={{ color: '#FFFFFF', fontSize: '18px', fontWeight: '700' }}>
+              Total
+            </span>
+            <span style={{
+              color: '#29BD98',
+              fontSize: '28px',
+              fontWeight: '800'
+            }}>
+              {formatCurrency(estimate.total)}
+            </span>
+          </div>
+        </motion.div>
+
+        {/* Payment Method */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          style={{
+            backgroundColor: '#15293A',
+            borderRadius: '16px',
+            padding: isMobile ? '24px 20px' : '32px',
+            marginBottom: '24px',
+            border: '1px solid rgba(255, 255, 255, 0.1)'
+          }}
+        >
+          <h3 style={{
+            fontSize: '18px',
+            fontWeight: '700',
+            color: '#FFFFFF',
+            marginBottom: '20px'
+          }}>
+            Payment Method
+          </h3>
+          
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <label style={{
+              display: 'flex',
+              alignItems: 'center',
+              padding: '16px',
+              backgroundColor: paymentMethod === 'stripe' ? 'rgba(41, 189, 152, 0.1)' : 'rgba(255, 255, 255, 0.03)',
+              border: paymentMethod === 'stripe' ? '2px solid #29BD98' : '1px solid rgba(255, 255, 255, 0.1)',
+              borderRadius: '12px',
+              cursor: 'pointer'
+            }}>
+              <input
+                type="radio"
+                name="payment"
+                value="stripe"
+                checked={paymentMethod === 'stripe'}
+                onChange={(e) => setPaymentMethod(e.target.value)}
+                style={{ marginRight: '12px' }}
+              />
+              <span style={{ color: '#FFFFFF', fontSize: '15px', fontWeight: '600' }}>
+                💳 Credit Card (Stripe)
+              </span>
+            </label>
+            
+            <label style={{
+              display: 'flex',
+              alignItems: 'center',
+              padding: '16px',
+              backgroundColor: paymentMethod === 'paystack' ? 'rgba(41, 189, 152, 0.1)' : 'rgba(255, 255, 255, 0.03)',
+              border: paymentMethod === 'paystack' ? '2px solid #29BD98' : '1px solid rgba(255, 255, 255, 0.1)',
+              borderRadius: '12px',
+              cursor: 'pointer'
+            }}>
+              <input
+                type="radio"
+                name="payment"
+                value="paystack"
+                checked={paymentMethod === 'paystack'}
+                onChange={(e) => setPaymentMethod(e.target.value)}
+                style={{ marginRight: '12px' }}
+              />
+              <span style={{ color: '#FFFFFF', fontSize: '15px', fontWeight: '600' }}>
+                🏦 Paystack
+              </span>
+            </label>
+          </div>
+        </motion.div>
+
+        {/* Checkout Button */}
+        <motion.button
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          whileHover={{ scale: loading ? 1 : 1.02 }}
+          whileTap={{ scale: loading ? 1 : 0.98 }}
+          onClick={handleCheckout}
+          disabled={loading}
+          style={{
+            width: '100%',
+            backgroundColor: loading ? 'rgba(41, 189, 152, 0.5)' : '#29BD98',
+            color: '#FFFFFF',
+            border: 'none',
+            borderRadius: '50px',
+            padding: '20px',
+            fontSize: '18px',
+            fontWeight: '700',
+            cursor: loading ? 'not-allowed' : 'pointer',
+            boxShadow: '0 4px 20px rgba(41, 189, 152, 0.3)',
+            marginBottom: '16px'
+          }}
+        >
+          {loading ? 'Processing...' : `Pay ${formatCurrency(estimate.total)}`}
+        </motion.button>
+
+        <p style={{
+          textAlign: 'center',
+          fontSize: '13px',
+          color: 'rgba(255, 255, 255, 0.5)'
+        }}>
+          🔒 Secure payment • Your information is encrypted and protected
+        </p>
+      </div>
+    </div>
+  );
+};
+
+export default CheckoutPage;

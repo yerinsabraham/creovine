@@ -1,0 +1,107 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper function to check if user is admin
+    function isAdmin() {
+      return request.auth != null && request.auth.token.email == 'yerinssaibs@gmail.com';
+    }
+    
+    // Helper function to check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Helper function to check if user owns the document
+    function isOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Projects collection
+    match /projects/{projectId} {
+      // Admin can read all projects
+      allow read: if isAdmin();
+      
+      // Users can read their own projects (draft or submitted)
+      allow read: if isAuthenticated() && 
+                     (resource.data.userId == request.auth.uid);
+      
+      // Users can create their own projects
+      allow create: if isAuthenticated() && 
+                       request.resource.data.userId == request.auth.uid;
+      
+      // Users can update their own projects
+      allow update: if isAuthenticated() && 
+                       resource.data.userId == request.auth.uid;
+      
+      // Admin can update any project (for status changes)
+      allow update: if isAdmin();
+      
+      // Users can delete their own draft projects
+      allow delete: if isAuthenticated() && 
+                       resource.data.userId == request.auth.uid &&
+                       resource.data.status == 'draft';
+    }
+    
+    // Users collection
+    match /users/{userId} {
+      // Admin can read all users
+      allow read: if isAdmin();
+      
+      // Users can read their own profile
+      allow read: if isAuthenticated() && userId == request.auth.uid;
+      
+      // Users can create/update their own profile
+      allow create, update: if isAuthenticated() && userId == request.auth.uid;
+      
+      // Admin can update user profiles
+      allow update: if isAdmin();
+    }
+    
+    // Conversations collection - for expert chat
+    match /conversations/{conversationId} {
+      // Admin can read all conversations
+      allow read: if isAdmin();
+      
+      // Users can read conversations they're part of
+      allow read: if isAuthenticated() && 
+                     resource.data.userId == request.auth.uid;
+      
+      // Users can create conversations
+      allow create: if isAuthenticated() && 
+                       request.resource.data.userId == request.auth.uid;
+      
+      // Users can update their own conversations
+      allow update: if isAuthenticated() && 
+                       resource.data.userId == request.auth.uid;
+      
+      // Messages subcollection
+      match /messages/{messageId} {
+        // Users can read messages in their conversations
+        allow read: if isAuthenticated();
+        
+        // Users can create messages in their conversations
+        allow create: if isAuthenticated() && 
+                         request.resource.data.senderId == request.auth.uid;
+        
+        // Admin can read all messages
+        allow read: if isAdmin();
+        
+        // Users can update their own messages
+        allow update: if isAuthenticated() && 
+                         resource.data.senderId == request.auth.uid;
+      }
+    }
+    
+    // Admin notifications
+    match /adminNotifications/{notificationId} {
+      // Only admin can read/write notifications
+      allow read, write: if isAdmin();
+    }
+    
+    // Default deny all other access
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

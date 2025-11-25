@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/png" href="/src/assets/logo.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="description" content="Creovine - Turn your app idea into reality in record time with our intelligent platform" />
+    
+    <!-- Performance Optimizations -->
+    <link rel="preconnect" href="https://firestore.googleapis.com" />
+    <link rel="preconnect" href="https://firebase.googleapis.com" />
+    <link rel="dns-prefetch" href="https://firestore.googleapis.com" />
+    <link rel="dns-prefetch" href="https://firebase.googleapis.com" />
+    
+    <title>Creovine - Idea to App in Record Time</title>
+    <style>
+      /* Loading Screen Styles */
+      #loading-screen {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100vh;
+        background: linear-gradient(135deg, #15293A 0%, #0F1F2E 100%);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+        transition: opacity 0.5s ease-out;
+      }
+      
+      #loading-screen.fade-out {
+        opacity: 0;
+        pointer-events: none;
+      }
+      
+      .loader-logo {
+        width: 120px;
+        height: auto;
+        margin-bottom: 32px;
+        animation: pulse 2s ease-in-out infinite;
+      }
+      
+      @keyframes pulse {
+        0%, 100% {
+          opacity: 1;
+          transform: scale(1);
+        }
+        50% {
+          opacity: 0.7;
+          transform: scale(0.95);
+        }
+      }
+      
+      .loader-spinner {
+        width: 50px;
+        height: 50px;
+        border: 4px solid rgba(41, 189, 152, 0.2);
+        border-top: 4px solid #29BD98;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+      
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+      
+      .loader-text {
+        margin-top: 24px;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+        font-size: 16px;
+        font-weight: 600;
+        color: rgba(255, 255, 255, 0.7);
+        letter-spacing: 0.5px;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Loading Screen -->
+    <div id="loading-screen">
+      <svg class="loader-logo" viewBox="0 0 200 60" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" style="stop-color:#29BD98;stop-opacity:1" />
+            <stop offset="100%" style="stop-color:#2497F9;stop-opacity:1" />
+          </linearGradient>
+        </defs>
+        <text x="10" y="45" font-family="Arial, sans-serif" font-size="48" font-weight="800" fill="url(#gradient)">Creovine</text>
+      </svg>
+      <div class="loader-spinner"></div>
+      <div class="loader-text">Loading your experience...</div>
+    </div>
+    
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
