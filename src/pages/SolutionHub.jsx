@@ -7,12 +7,22 @@ import { useMediaQuery } from '../hooks/useMediaQuery';
 import { useProject } from '../context/ProjectContext';
 import { useAuth } from '../context/AuthContext';
 import logo from '../assets/logo.png';
+import googleIcon from '../assets/google.png';
 
 const SolutionHub = () => {
   const navigate = useNavigate();
   const isMobile = useMediaQuery('(max-width: 768px)');
-  const { currentUser } = useAuth();
+  const { currentUser, signInWithGoogle, login, signup } = useAuth();
   const { projectData, updatePhaseData } = useProject();
+  
+  // Auth modal states
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [authLoading, setAuthLoading] = useState(false);
+  const [authMode, setAuthMode] = useState('signin'); // 'signin' or 'signup'
+  const [authEmail, setAuthEmail] = useState('');
+  const [authPassword, setAuthPassword] = useState('');
+  const [authName, setAuthName] = useState('');
+  const [authError, setAuthError] = useState('');
   
   // Multi-select state - Load from projectData or localStorage
   const [primaryService, setPrimaryService] = useState(() => {
@@ -102,15 +112,7 @@ const SolutionHub = () => {
 
     // Check if user is logged in
     if (!currentUser) {
-      const shouldLogin = window.confirm('You need to sign in to continue. Would you like to go to the login page?');
-      if (shouldLogin) {
-        // Save selections to localStorage so we can restore them after login
-        localStorage.setItem('pendingService', JSON.stringify({
-          primaryService,
-          addOns
-        }));
-        navigate('/');
-      }
+      setShowAuthModal(true);
       return;
     }
 
@@ -133,6 +135,87 @@ const SolutionHub = () => {
     } catch (error) {
       console.error('Error saving selections:', error);
       alert('Error saving your selections. Please try again.');
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    setAuthLoading(true);
+    setAuthError('');
+    try {
+      await signInWithGoogle();
+      
+      // Save selections after successful login
+      await updatePhaseData('serviceCategory', primaryService.id);
+      await updatePhaseData('serviceName', primaryService.name);
+      await updatePhaseData('primaryService', {
+        id: primaryService.id,
+        name: primaryService.name,
+        route: primaryService.route
+      });
+      await updatePhaseData('addOns', addOns.map(a => ({ id: a.id, name: a.name, route: a.route })));
+
+      // Clear pending and close modal
+      localStorage.removeItem('pendingService');
+      setShowAuthModal(false);
+
+      // Navigate to onboarding
+      navigate(primaryService.route);
+    } catch (error) {
+      console.error('Error signing in:', error);
+      setAuthError('Failed to sign in with Google. Please try again.');
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  const handleEmailAuth = async (e) => {
+    e.preventDefault();
+    setAuthLoading(true);
+    setAuthError('');
+
+    try {
+      if (authMode === 'signup') {
+        if (!authName.trim()) {
+          setAuthError('Please enter your name');
+          setAuthLoading(false);
+          return;
+        }
+        await signup(authEmail, authPassword, authName);
+      } else {
+        await login(authEmail, authPassword);
+      }
+      
+      // Save selections after successful login
+      await updatePhaseData('serviceCategory', primaryService.id);
+      await updatePhaseData('serviceName', primaryService.name);
+      await updatePhaseData('primaryService', {
+        id: primaryService.id,
+        name: primaryService.name,
+        route: primaryService.route
+      });
+      await updatePhaseData('addOns', addOns.map(a => ({ id: a.id, name: a.name, route: a.route })));
+
+      // Clear pending and close modal
+      localStorage.removeItem('pendingService');
+      setShowAuthModal(false);
+
+      // Navigate to onboarding
+      navigate(primaryService.route);
+    } catch (error) {
+      console.error('Authentication error:', error);
+      if (error.code === 'auth/email-already-in-use') {
+        setAuthError('Email already in use. Try signing in instead.');
+      } else if (error.code === 'auth/weak-password') {
+        setAuthError('Password should be at least 6 characters.');
+      } else if (error.code === 'auth/invalid-email') {
+        setAuthError('Invalid email address.');
+      } else if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+        setAuthError('Invalid email or password.');
+      } else {
+        setAuthError('Authentication failed. Please try again.');
+      }
+    } finally {
+      setAuthLoading(false);
     }
   };
 
@@ -519,19 +602,190 @@ const SolutionHub = () => {
                   color: '#FFFFFF',
                   marginBottom: '16px'
                 }}>
-                  Sign In to Continue
+                  {authMode === 'signin' ? 'Sign In' : 'Create Account'}
                 </h2>
                 
                 <p style={{
                   fontSize: '15px',
                   color: 'rgba(255, 255, 255, 0.7)',
-                  marginBottom: '32px',
+                  marginBottom: '24px',
                   lineHeight: '1.6'
                 }}>
                   You've selected <strong style={{ color: '#29BD98' }}>{primaryService?.name}</strong>
-                  {addOns.length > 0 && ` + ${addOns.length} more service${addOns.length > 1 ? 's' : ''}`}.
-                  Sign in to start your onboarding.
+                  {addOns.length > 0 && ` + ${addOns.length} more service${addOns.length > 1 ? 's' : ''}`}
                 </p>
+
+                {/* Tab Switcher */}
+                <div style={{
+                  display: 'flex',
+                  gap: '8px',
+                  marginBottom: '24px',
+                  backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                  padding: '4px',
+                  borderRadius: '12px'
+                }}>
+                  <button
+                    onClick={() => {
+                      setAuthMode('signin');
+                      setAuthError('');
+                    }}
+                    style={{
+                      flex: 1,
+                      padding: '12px',
+                      backgroundColor: authMode === 'signin' ? '#29BD98' : 'transparent',
+                      color: authMode === 'signin' ? '#FFFFFF' : 'rgba(255, 255, 255, 0.6)',
+                      border: 'none',
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease'
+                    }}
+                  >
+                    Sign In
+                  </button>
+                  <button
+                    onClick={() => {
+                      setAuthMode('signup');
+                      setAuthError('');
+                    }}
+                    style={{
+                      flex: 1,
+                      padding: '12px',
+                      backgroundColor: authMode === 'signup' ? '#29BD98' : 'transparent',
+                      color: authMode === 'signup' ? '#FFFFFF' : 'rgba(255, 255, 255, 0.6)',
+                      border: 'none',
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease'
+                    }}
+                  >
+                    Sign Up
+                  </button>
+                </div>
+
+                {/* Email/Password Form */}
+                <form onSubmit={handleEmailAuth} style={{ marginBottom: '20px' }}>
+                  {authMode === 'signup' && (
+                    <input
+                      type="text"
+                      placeholder="Full Name"
+                      value={authName}
+                      onChange={(e) => setAuthName(e.target.value)}
+                      required
+                      style={{
+                        width: '100%',
+                        padding: '14px 16px',
+                        backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                        borderRadius: '12px',
+                        color: '#FFFFFF',
+                        fontSize: '15px',
+                        marginBottom: '12px',
+                        outline: 'none',
+                        transition: 'border-color 0.2s ease'
+                      }}
+                      onFocus={(e) => e.target.style.borderColor = '#29BD98'}
+                      onBlur={(e) => e.target.style.borderColor = 'rgba(255, 255, 255, 0.1)'}
+                    />
+                  )}
+                  
+                  <input
+                    type="email"
+                    placeholder="Email"
+                    value={authEmail}
+                    onChange={(e) => setAuthEmail(e.target.value)}
+                    required
+                    style={{
+                      width: '100%',
+                      padding: '14px 16px',
+                      backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                      border: '1px solid rgba(255, 255, 255, 0.1)',
+                      borderRadius: '12px',
+                      color: '#FFFFFF',
+                      fontSize: '15px',
+                      marginBottom: '12px',
+                      outline: 'none',
+                      transition: 'border-color 0.2s ease'
+                    }}
+                    onFocus={(e) => e.target.style.borderColor = '#29BD98'}
+                    onBlur={(e) => e.target.style.borderColor = 'rgba(255, 255, 255, 0.1)'}
+                  />
+                  
+                  <input
+                    type="password"
+                    placeholder="Password"
+                    value={authPassword}
+                    onChange={(e) => setAuthPassword(e.target.value)}
+                    required
+                    minLength="6"
+                    style={{
+                      width: '100%',
+                      padding: '14px 16px',
+                      backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                      border: '1px solid rgba(255, 255, 255, 0.1)',
+                      borderRadius: '12px',
+                      color: '#FFFFFF',
+                      fontSize: '15px',
+                      marginBottom: '16px',
+                      outline: 'none',
+                      transition: 'border-color 0.2s ease'
+                    }}
+                    onFocus={(e) => e.target.style.borderColor = '#29BD98'}
+                    onBlur={(e) => e.target.style.borderColor = 'rgba(255, 255, 255, 0.1)'}
+                  />
+
+                  {authError && (
+                    <div style={{
+                      padding: '12px',
+                      backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                      border: '1px solid rgba(239, 68, 68, 0.3)',
+                      borderRadius: '8px',
+                      color: '#FCA5A5',
+                      fontSize: '14px',
+                      marginBottom: '16px',
+                      textAlign: 'left'
+                    }}>
+                      {authError}
+                    </div>
+                  )}
+
+                  <motion.button
+                    type="submit"
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    disabled={authLoading}
+                    style={{
+                      width: '100%',
+                      backgroundColor: '#29BD98',
+                      color: '#FFFFFF',
+                      border: 'none',
+                      borderRadius: '12px',
+                      padding: '16px 24px',
+                      fontSize: '16px',
+                      fontWeight: '600',
+                      cursor: authLoading ? 'not-allowed' : 'pointer',
+                      marginBottom: '16px',
+                      opacity: authLoading ? 0.7 : 1
+                    }}
+                  >
+                    {authLoading ? (authMode === 'signin' ? 'Signing in...' : 'Creating account...') : (authMode === 'signin' ? 'Sign In' : 'Sign Up')}
+                  </motion.button>
+                </form>
+
+                {/* Divider */}
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  marginBottom: '16px'
+                }}>
+                  <div style={{ flex: 1, height: '1px', backgroundColor: 'rgba(255, 255, 255, 0.1)' }} />
+                  <span style={{ color: 'rgba(255, 255, 255, 0.4)', fontSize: '13px' }}>OR</span>
+                  <div style={{ flex: 1, height: '1px', backgroundColor: 'rgba(255, 255, 255, 0.1)' }} />
+                </div>
 
                 <motion.button
                   whileHover={{ scale: 1.02 }}
@@ -544,8 +798,8 @@ const SolutionHub = () => {
                     color: '#15293A',
                     border: 'none',
                     borderRadius: '12px',
-                    padding: '16px 24px',
-                    fontSize: '16px',
+                    padding: '14px 24px',
+                    fontSize: '15px',
                     fontWeight: '600',
                     cursor: authLoading ? 'not-allowed' : 'pointer',
                     display: 'flex',
@@ -557,11 +811,17 @@ const SolutionHub = () => {
                   }}
                 >
                   <img src={googleIcon} alt="Google" style={{ width: '20px', height: '20px' }} />
-                  {authLoading ? 'Signing in...' : 'Continue with Google'}
+                  Continue with Google
                 </motion.button>
 
                 <button
-                  onClick={() => setShowAuthModal(false)}
+                  onClick={() => {
+                    setShowAuthModal(false);
+                    setAuthError('');
+                    setAuthEmail('');
+                    setAuthPassword('');
+                    setAuthName('');
+                  }}
                   style={{
                     backgroundColor: 'transparent',
                     color: 'rgba(255, 255, 255, 0.6)',
