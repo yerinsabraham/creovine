@@ -97,7 +97,9 @@ export const ProjectProvider = ({ children }) => {
           primaryService: data.primaryService,
           addOns: data.addOns,
           serviceCategory: data.serviceCategory,
-          serviceName: data.serviceName
+          serviceName: data.serviceName,
+          completedServices: data.completedServices,
+          currentServiceIndex: data.currentServiceIndex
         };
         setProjectData(mergedData);
         setCurrentPhase(data.currentPhase || 1);
@@ -156,13 +158,16 @@ export const ProjectProvider = ({ children }) => {
 
     setProjectData(updatedProjectData);
 
+    // Filter out metadata fields (primaryService, addOns, etc.) from phases
+    const { primaryService, addOns, serviceCategory, serviceName, completedServices, currentServiceIndex, ...phasesOnly } = updatedProjectData;
+
     // Save to Firestore
     const projectRef = doc(db, 'projects', `${currentUser.uid}_draft`);
     await setDoc(projectRef, {
       userId: currentUser.uid,
       userEmail: currentUser.email,
       userName: currentUser.displayName || currentUser.email,
-      phases: updatedProjectData,
+      phases: phasesOnly,
       currentPhase,
       status: 'draft',
       updatedAt: serverTimestamp()
@@ -197,6 +202,9 @@ export const ProjectProvider = ({ children }) => {
 
     setProjectData(updatedProjectData);
 
+    // Filter out metadata fields from phases
+    const { primaryService, addOns, serviceCategory, serviceName, completedServices, currentServiceIndex, ...phasesOnly } = updatedProjectData;
+
     // Save to Firestore
     if (currentUser) {
       const projectRef = doc(db, 'projects', `${currentUser.uid}_draft`);
@@ -204,10 +212,13 @@ export const ProjectProvider = ({ children }) => {
         userId: currentUser.uid,
         userEmail: currentUser.email,
         userName: currentUser.displayName || currentUser.email,
-        phases: updatedProjectData,
+        phases: phasesOnly,
         currentPhase,
         status: 'draft',
-        updatedAt: serverTimestamp()
+        updatedAt: serverTimestamp(),
+        // Save metadata at root level
+        completedServices: updatedCompletedServices,
+        currentServiceIndex: (projectData.currentServiceIndex || 0) + 1
       }, { merge: true });
     }
 
@@ -259,13 +270,23 @@ export const ProjectProvider = ({ children }) => {
     if (!currentUser) return;
 
     const dataToSubmit = finalData || projectData;
+    
+    // Filter out metadata fields from phases
+    const { primaryService, addOns, serviceCategory, serviceName, completedServices, currentServiceIndex, ...phasesOnly } = dataToSubmit;
 
     const projectRef = doc(db, 'projects', `${currentUser.uid}_${Date.now()}`);
     await setDoc(projectRef, {
       userId: currentUser.uid,
       userEmail: currentUser.email,
       userName: currentUser.displayName || currentUser.email,
-      phases: dataToSubmit,
+      phases: phasesOnly,
+      // Save metadata at root level
+      primaryService,
+      addOns,
+      serviceCategory,
+      serviceName,
+      completedServices,
+      currentServiceIndex,
       status: 'submitted',
       createdAt: serverTimestamp(),
       submittedAt: serverTimestamp()
