@@ -22,23 +22,27 @@ service cloud.firestore {
       // Admin can read all projects
       allow read: if isAdmin();
       
-      // Users can read their own projects (draft or submitted)
+      // Users can read their own projects (including non-existent docs for draft creation)
+      // Check if projectId contains user's UID (e.g., userId_draft pattern)
       allow read: if isAuthenticated() && 
-                     (resource.data.userId == request.auth.uid);
+                     (projectId.matches('.*' + request.auth.uid + '.*') || 
+                      (resource != null && resource.data.userId == request.auth.uid));
       
       // Users can create their own projects
       allow create: if isAuthenticated() && 
                        request.resource.data.userId == request.auth.uid;
       
-      // Users can update their own projects
+      // Users can update their own projects (check both resource and request for userId)
       allow update: if isAuthenticated() && 
-                       resource.data.userId == request.auth.uid;
+                       (request.resource.data.userId == request.auth.uid ||
+                        (resource != null && resource.data.userId == request.auth.uid));
       
       // Admin can update any project (for status changes)
       allow update: if isAdmin();
       
       // Users can delete their own draft projects
       allow delete: if isAuthenticated() && 
+                       resource != null &&
                        resource.data.userId == request.auth.uid &&
                        resource.data.status == 'draft';
     }
