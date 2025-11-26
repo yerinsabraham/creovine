@@ -8,6 +8,7 @@ import { useMultiServiceComplete, useIsMultiService } from '../../../hooks/useMu
 import ChipGroup from '../../../components/common/ChipGroup';
 import AssistedToggle from '../../../components/common/AssistedToggle';
 import CartSummary from '../../../components/common/CartSummary';
+import TimelineSelector from '../../../components/common/TimelineSelector';
 
 const AuthStep3 = () => {
   const navigate = useNavigate();
@@ -23,7 +24,8 @@ const AuthStep3 = () => {
   const hasFrontend = addOns.some(a => a.id === 'frontend');
   
   const [integration, setIntegration] = useState(projectData?.auth?.integration || '');
-  const [timeline, setTimeline] = useState(projectData?.auth?.timeline || '');
+  const [timeline, setTimeline] = useState(projectData?.auth?.timeline || { amount: 7, unit: 'days' });
+  const [timelineMultiplier, setTimelineMultiplier] = useState(projectData?.auth?.timelineMultiplier || 1.0);
   const [notes, setNotes] = useState(projectData?.auth?.notes || '');
   
   const [supportAssist, setSupportAssist] = useState(items.some(item => item.id === 'auth-support'));
@@ -50,20 +52,20 @@ const AuthStep3 = () => {
 
   const handleSubmit = async () => {
     try {
-      const serviceData = { ...projectData?.auth, integration, timeline, notes };
+      const serviceData = { ...projectData?.auth, integration, timeline, timelineMultiplier, notes };
       await updateProjectData({ auth: serviceData });
       
       if (isMultiService) {
         await handleMultiServiceComplete(serviceData);
       } else {
-        navigate('/success');
+        navigate('/project-submitted');
       }
     } catch (error) {
       console.error('Submit error:', error);
     }
   };
 
-  const isValid = integration && timeline;
+  const isValid = integration && timeline && timeline.amount > 0;
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#FAFAFA' }}>
@@ -94,13 +96,22 @@ const AuthStep3 = () => {
               <label style={{ display: 'block', fontSize: '16px', fontWeight: '500', color: '#333', marginBottom: '12px' }}>Integration type *</label>
               <ChipGroup options={integrationOptions} selected={integration} onChange={setIntegration} themeColor={themeColor} />
             </div>
-            <div style={{ marginBottom: '32px' }}>
+            <div style={{ marginBottom: '16px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                <label style={{ fontSize: '16px', fontWeight: '500', color: '#333' }}>Timeline *</label>
+                <div style={{ fontSize: '16px', fontWeight: '500', color: '#333' }}>Delivery Timeline *</div>
                 <AssistedToggle enabled={supportAssist} onToggle={setSupportAssist} price={55} label="Ongoing support" />
               </div>
-              <ChipGroup options={timelineOptions} selected={timeline} onChange={setTimeline} themeColor={themeColor} />
             </div>
+            <TimelineSelector
+              value={timeline}
+              onChange={(timelineData) => {
+                setTimeline(timelineData);
+                setTimelineMultiplier(timelineData.priceMultiplier);
+              }}
+              serviceComplexity="medium"
+              showPriceImpact={true}
+              style={{ marginBottom: '32px' }}
+            />
             <div style={{ marginBottom: '32px' }}>
               <label style={{ display: 'block', fontSize: '16px', fontWeight: '500', color: '#333', marginBottom: '12px' }}>Additional notes</label>
               <textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Any specific requirements, existing auth setup details, or constraints..." style={{ width: '100%', padding: '16px', border: '1px solid #E5E7EB', borderRadius: '12px', fontSize: '15px', minHeight: '100px', resize: 'vertical', outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' }} />

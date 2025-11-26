@@ -8,6 +8,7 @@ import { useIsMobile } from '../../../hooks/useMediaQuery';
 import { useMultiServiceComplete, useIsMultiService } from '../../../hooks/useMultiService';
 import AssistedToggle from '../../../components/common/AssistedToggle';
 import CartSummary from '../../../components/common/CartSummary';
+import TimelineSelector from '../../../components/common/TimelineSelector';
 import logo from '../../../assets/logo.png';
 
 const LandingPageStep3 = () => {
@@ -24,7 +25,8 @@ const LandingPageStep3 = () => {
     subheadline: projectData?.landingPage?.subheadline || '',
     keyFeatures: projectData?.landingPage?.keyFeatures || '',
     socialProof: projectData?.landingPage?.socialProof || '',
-    timeline: projectData?.landingPage?.timeline || '',
+    timeline: projectData?.landingPage?.timeline || { amount: 3, unit: 'days' },
+    timelineMultiplier: projectData?.landingPage?.timelineMultiplier || 1.0,
     deliveryFormat: projectData?.landingPage?.deliveryFormat || '',
     hostingHelp: projectData?.landingPage?.hostingHelp || false,
     additionalNotes: projectData?.landingPage?.additionalNotes || ''
@@ -49,7 +51,7 @@ const LandingPageStep3 = () => {
       if (isMultiService) {
         await handleMultiServiceComplete(serviceData);
       } else {
-        navigate('/quote');
+        navigate('/project-submitted');
       }
     } catch (error) {
       console.error('Submit error:', error);
@@ -67,7 +69,7 @@ const LandingPageStep3 = () => {
   };
 
   // Validation
-  const isTimelineValid = formData.timeline.trim();
+  const isTimelineValid = formData.timeline && formData.timeline.amount > 0;
   const isFormValid = isTimelineValid;
 
   const timelineOptions = [
@@ -339,42 +341,17 @@ const LandingPageStep3 = () => {
               </>
             )}
 
-            {/* Timeline */}
-            <div style={{ marginBottom: '32px' }}>
-              <label style={{
-                display: 'block',
-                fontSize: '16px',
-                fontWeight: '700',
-                color: '#FFFFFF',
-                marginBottom: '12px'
-              }}>
-                When do you need this? *
-              </label>
-              <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-                {timelineOptions.map(option => (
-                  <button
-                    key={option}
-                    onClick={() => handleInputChange('timeline', option)}
-                    style={{
-                      padding: '12px 24px',
-                      fontSize: '14px',
-                      fontWeight: '600',
-                      color: formData.timeline === option ? '#FFFFFF' : 'rgba(255, 255, 255, 0.7)',
-                      backgroundColor: formData.timeline === option 
-                        ? 'rgba(245, 158, 11, 0.2)' 
-                        : 'rgba(255, 255, 255, 0.05)',
-                      border: formData.timeline === option 
-                        ? '2px solid #F59E0B' 
-                        : '2px solid rgba(255, 255, 255, 0.1)',
-                      borderRadius: '12px',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    {option}
-                  </button>
-                ))}
-              </div>
-            </div>
+            {/* Timeline Selector */}
+            <TimelineSelector
+              value={formData.timeline}
+              onChange={(timelineData) => {
+                handleInputChange('timeline', timelineData);
+                handleInputChange('timelineMultiplier', timelineData.priceMultiplier);
+              }}
+              serviceComplexity="simple"
+              showPriceImpact={true}
+              style={{ marginBottom: '32px' }}
+            />
 
             {/* Delivery Format */}
             <div style={{ marginBottom: '32px' }}>

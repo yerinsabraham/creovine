@@ -4,15 +4,19 @@ import { motion } from 'framer-motion';
 import { useProject } from '../context/ProjectContext';
 import { useIsMobile } from '../hooks/useMediaQuery';
 import { formatCurrency } from '../utils/pricingCalculator';
+import { useLocation } from '../context/LocationContext';
 
 const CheckoutPage = () => {
   const { projectData, submitProject } = useProject();
+  const { paymentProvider, currency, location: userLocation } = useLocation();
   const [loading, setLoading] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState('stripe');
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   
   const estimate = projectData?.phases?.estimate;
+  
+  // Payment method based on user location
+  const [paymentMethod, setPaymentMethod] = useState(paymentProvider || 'stripe');
 
   const handleCheckout = async () => {
     setLoading(true);
@@ -137,7 +141,7 @@ const CheckoutPage = () => {
                 {item.serviceName}
               </span>
               <span style={{ color: '#FFFFFF', fontSize: '15px', fontWeight: '600' }}>
-                {formatCurrency(item.price)}
+                {formatCurrency(item.localPrice || item.price, estimate.currency)}
               </span>
             </div>
           ))}
@@ -154,7 +158,7 @@ const CheckoutPage = () => {
                 Discount
               </span>
               <span style={{ color: '#29BD98', fontSize: '15px', fontWeight: '600' }}>
-                -{formatCurrency(estimate.discount)}
+                -{formatCurrency(estimate.discount, estimate.currency)}
               </span>
             </div>
           )}
@@ -174,7 +178,7 @@ const CheckoutPage = () => {
               fontSize: '28px',
               fontWeight: '800'
             }}>
-              {formatCurrency(estimate.total)}
+              {formatCurrency(estimate.total, estimate.currency)}
             </span>
           </div>
         </motion.div>
@@ -196,55 +200,142 @@ const CheckoutPage = () => {
             fontSize: '18px',
             fontWeight: '700',
             color: '#FFFFFF',
-            marginBottom: '20px'
+            marginBottom: '8px'
           }}>
             Payment Method
           </h3>
           
+          {/* Location-based payment info */}
+          {currency?.code === 'NGN' && (
+            <div style={{
+              marginBottom: '16px',
+              padding: '12px',
+              backgroundColor: 'rgba(41, 189, 152, 0.1)',
+              borderRadius: '8px',
+              border: '1px solid rgba(41, 189, 152, 0.3)'
+            }}>
+              <p style={{ fontSize: '14px', color: '#29BD98', margin: 0 }}>
+                🇳🇬 You're getting special Nigeria pricing! Payment via Paystack (recommended)
+              </p>
+            </div>
+          )}
+          
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            <label style={{
-              display: 'flex',
-              alignItems: 'center',
-              padding: '16px',
-              backgroundColor: paymentMethod === 'stripe' ? 'rgba(41, 189, 152, 0.1)' : 'rgba(255, 255, 255, 0.03)',
-              border: paymentMethod === 'stripe' ? '2px solid #29BD98' : '1px solid rgba(255, 255, 255, 0.1)',
-              borderRadius: '12px',
-              cursor: 'pointer'
-            }}>
-              <input
-                type="radio"
-                name="payment"
-                value="stripe"
-                checked={paymentMethod === 'stripe'}
-                onChange={(e) => setPaymentMethod(e.target.value)}
-                style={{ marginRight: '12px' }}
-              />
-              <span style={{ color: '#FFFFFF', fontSize: '15px', fontWeight: '600' }}>
-                💳 Credit Card (Stripe)
-              </span>
-            </label>
-            
-            <label style={{
-              display: 'flex',
-              alignItems: 'center',
-              padding: '16px',
-              backgroundColor: paymentMethod === 'paystack' ? 'rgba(41, 189, 152, 0.1)' : 'rgba(255, 255, 255, 0.03)',
-              border: paymentMethod === 'paystack' ? '2px solid #29BD98' : '1px solid rgba(255, 255, 255, 0.1)',
-              borderRadius: '12px',
-              cursor: 'pointer'
-            }}>
-              <input
-                type="radio"
-                name="payment"
-                value="paystack"
-                checked={paymentMethod === 'paystack'}
-                onChange={(e) => setPaymentMethod(e.target.value)}
-                style={{ marginRight: '12px' }}
-              />
-              <span style={{ color: '#FFFFFF', fontSize: '15px', fontWeight: '600' }}>
-                🏦 Paystack
-              </span>
-            </label>
+            {paymentProvider === 'paystack' ? (
+              <>
+                <label style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  padding: '16px',
+                  backgroundColor: paymentMethod === 'paystack' ? 'rgba(41, 189, 152, 0.1)' : 'rgba(255, 255, 255, 0.03)',
+                  border: paymentMethod === 'paystack' ? '2px solid #29BD98' : '1px solid rgba(255, 255, 255, 0.1)',
+                  borderRadius: '12px',
+                  cursor: 'pointer'
+                }}>
+                  <input
+                    type="radio"
+                    name="payment"
+                    value="paystack"
+                    checked={paymentMethod === 'paystack'}
+                    onChange={(e) => setPaymentMethod(e.target.value)}
+                    style={{ marginRight: '12px' }}
+                  />
+                  <div>
+                    <div style={{ color: '#FFFFFF', fontSize: '15px', fontWeight: '600' }}>
+                      🏦 Paystack (Recommended)
+                    </div>
+                    <div style={{ fontSize: '13px', color: 'rgba(255, 255, 255, 0.6)', marginTop: '4px' }}>
+                      Bank Transfer, Cards, USSD - All Nigeria payment methods
+                    </div>
+                  </div>
+                </label>
+                
+                <label style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  padding: '16px',
+                  backgroundColor: paymentMethod === 'stripe' ? 'rgba(41, 189, 152, 0.1)' : 'rgba(255, 255, 255, 0.03)',
+                  border: paymentMethod === 'stripe' ? '2px solid #29BD98' : '1px solid rgba(255, 255, 255, 0.1)',
+                  borderRadius: '12px',
+                  cursor: 'pointer'
+                }}>
+                  <input
+                    type="radio"
+                    name="payment"
+                    value="stripe"
+                    checked={paymentMethod === 'stripe'}
+                    onChange={(e) => setPaymentMethod(e.target.value)}
+                    style={{ marginRight: '12px' }}
+                  />
+                  <div>
+                    <div style={{ color: '#FFFFFF', fontSize: '15px', fontWeight: '600' }}>
+                      💳 International Card (Stripe)
+                    </div>
+                    <div style={{ fontSize: '13px', color: 'rgba(255, 255, 255, 0.6)', marginTop: '4px' }}>
+                      Visa, Mastercard, American Express
+                    </div>
+                  </div>
+                </label>
+              </>
+            ) : (
+              <>
+                <label style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  padding: '16px',
+                  backgroundColor: paymentMethod === 'stripe' ? 'rgba(41, 189, 152, 0.1)' : 'rgba(255, 255, 255, 0.03)',
+                  border: paymentMethod === 'stripe' ? '2px solid #29BD98' : '1px solid rgba(255, 255, 255, 0.1)',
+                  borderRadius: '12px',
+                  cursor: 'pointer'
+                }}>
+                  <input
+                    type="radio"
+                    name="payment"
+                    value="stripe"
+                    checked={paymentMethod === 'stripe'}
+                    onChange={(e) => setPaymentMethod(e.target.value)}
+                    style={{ marginRight: '12px' }}
+                  />
+                  <div>
+                    <div style={{ color: '#FFFFFF', fontSize: '15px', fontWeight: '600' }}>
+                      💳 Credit Card (Stripe)
+                    </div>
+                    <div style={{ fontSize: '13px', color: 'rgba(255, 255, 255, 0.6)', marginTop: '4px' }}>
+                      Visa, Mastercard, American Express
+                    </div>
+                  </div>
+                </label>
+                
+                <label style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  padding: '16px',
+                  backgroundColor: paymentMethod === 'paystack' ? 'rgba(41, 189, 152, 0.1)' : 'rgba(255, 255, 255, 0.03)',
+                  border: paymentMethod === 'paystack' ? '2px solid #29BD98' : '1px solid rgba(255, 255, 255, 0.1)',
+                  borderRadius: '12px',
+                  cursor: 'pointer',
+                  opacity: 0.6
+                }}>
+                  <input
+                    type="radio"
+                    name="payment"
+                    value="paystack"
+                    checked={paymentMethod === 'paystack'}
+                    onChange={(e) => setPaymentMethod(e.target.value)}
+                    style={{ marginRight: '12px' }}
+                    disabled
+                  />
+                  <div>
+                    <div style={{ color: '#FFFFFF', fontSize: '15px', fontWeight: '600' }}>
+                      🏦 Paystack
+                    </div>
+                    <div style={{ fontSize: '13px', color: 'rgba(255, 255, 255, 0.6)', marginTop: '4px' }}>
+                      Available for Nigerian payments only
+                    </div>
+                  </div>
+                </label>
+              </>
+            )}
           </div>
         </motion.div>
 
@@ -271,7 +362,7 @@ const CheckoutPage = () => {
             marginBottom: '16px'
           }}
         >
-          {loading ? 'Processing...' : `Pay ${formatCurrency(estimate.total)}`}
+          {loading ? 'Processing...' : `Pay ${formatCurrency(estimate.total, estimate.currency)}`}
         </motion.button>
 
         <p style={{

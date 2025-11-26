@@ -7,6 +7,7 @@ import { useMultiServiceComplete, useIsMultiService } from '../../../hooks/useMu
 import ChipGroup from '../../../components/common/ChipGroup';
 import AssistedToggle from '../../../components/common/AssistedToggle';
 import CartSummary from '../../../components/common/CartSummary';
+import TimelineSelector from '../../../components/common/TimelineSelector';
 
 const ApiStep3 = () => {
   const navigate = useNavigate();
@@ -27,7 +28,8 @@ const ApiStep3 = () => {
   const [errorHandling, setErrorHandling] = useState(projectData?.api?.errorHandling || []);
   const [caching, setCaching] = useState(projectData?.api?.caching || '');
   const [documentation, setDocumentation] = useState(projectData?.api?.documentation || []);
-  const [timeline, setTimeline] = useState(projectData?.api?.timeline || '');
+  const [timeline, setTimeline] = useState(projectData?.api?.timeline || { amount: 7, unit: 'days' });
+  const [timelineMultiplier, setTimelineMultiplier] = useState(projectData?.api?.timelineMultiplier || 1.0);
   const [additionalNotes, setAdditionalNotes] = useState(projectData?.api?.additionalNotes || '');
   
   // Assisted toggles
@@ -85,20 +87,20 @@ const ApiStep3 = () => {
 
   const handleSubmit = async () => {
     try {
-      const serviceData = { ...projectData?.api, errorHandling, caching, documentation, timeline, additionalNotes };
+      const serviceData = { ...projectData?.api, errorHandling, caching, documentation, timeline, timelineMultiplier, additionalNotes };
       await updateProjectData({ api: serviceData });
       
       if (isMultiService) {
         await handleMultiServiceComplete(serviceData);
       } else {
-        navigate('/success');
+        navigate('/project-submitted');
       }
     } catch (error) {
       console.error('Submit error:', error);
     }
   };
 
-  const isValid = timeline;
+  const isValid = timeline && timeline.amount > 0;
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#FAFAFA' }}>
@@ -224,11 +226,11 @@ const ApiStep3 = () => {
             </div>
 
             {/* Timeline */}
-            <div style={{ marginBottom: '32px' }}>
+            <div style={{ marginBottom: '16px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                <label style={{ fontSize: '16px', fontWeight: '500', color: '#333' }}>
-                  Timeline *
-                </label>
+                <div style={{ fontSize: '16px', fontWeight: '500', color: '#333' }}>
+                  Delivery Timeline *
+                </div>
                 <AssistedToggle
                   enabled={integrationSupport}
                   onToggle={setIntegrationSupport}
@@ -236,13 +238,17 @@ const ApiStep3 = () => {
                   label="Ongoing support"
                 />
               </div>
-              <ChipGroup
-                options={timelineOptions}
-                selected={timeline}
-                onChange={setTimeline}
-                themeColor={themeColor}
-              />
             </div>
+            <TimelineSelector
+              value={timeline}
+              onChange={(timelineData) => {
+                setTimeline(timelineData);
+                setTimelineMultiplier(timelineData.priceMultiplier);
+              }}
+              serviceComplexity="medium"
+              showPriceImpact={true}
+              style={{ marginBottom: '32px' }}
+            />
 
             {/* Additional Notes */}
             <div style={{ marginBottom: '32px' }}>

@@ -6,6 +6,7 @@ import { AuthProvider } from './context/AuthContext'
 import { ProjectProvider } from './context/ProjectContext'
 import { AdminProvider } from './context/AdminContext'
 import { CartProvider } from './context/CartContext'
+import { LocationProvider } from './context/LocationContext'
 
 // Component to handle loading screen removal
 const AppWrapper = () => {
@@ -25,15 +26,17 @@ const AppWrapper = () => {
 
   return (
     <StrictMode>
-      <AuthProvider>
-        <AdminProvider>
-          <ProjectProvider>
-            <CartProvider>
-              <App />
-            </CartProvider>
-          </ProjectProvider>
-        </AdminProvider>
-      </AuthProvider>
+      <LocationProvider>
+        <AuthProvider>
+          <AdminProvider>
+            <ProjectProvider>
+              <CartProvider>
+                <App />
+              </CartProvider>
+            </ProjectProvider>
+          </AdminProvider>
+        </AuthProvider>
+      </LocationProvider>
     </StrictMode>
   );
 };

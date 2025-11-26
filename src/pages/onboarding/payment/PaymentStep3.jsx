@@ -8,6 +8,7 @@ import { useMultiServiceComplete, useIsMultiService } from '../../../hooks/useMu
 import ChipGroup from '../../../components/common/ChipGroup';
 import AssistedToggle from '../../../components/common/AssistedToggle';
 import CartSummary from '../../../components/common/CartSummary';
+import TimelineSelector from '../../../components/common/TimelineSelector';
 
 const PaymentStep3 = () => {
   const navigate = useNavigate();
@@ -22,7 +23,8 @@ const PaymentStep3 = () => {
   const hasBackend = addOns.some(a => a.id === 'backend');
   
   const [testing, setTesting] = useState(projectData?.payment?.testing || '');
-  const [timeline, setTimeline] = useState(projectData?.payment?.timeline || '');
+  const [timeline, setTimeline] = useState(projectData?.payment?.timeline || { amount: 7, unit: 'days' });
+  const [timelineMultiplier, setTimelineMultiplier] = useState(projectData?.payment?.timelineMultiplier || 1.0);
   const [notes, setNotes] = useState(projectData?.payment?.notes || '');
   
   const [supportAssist, setSupportAssist] = useState(items.some(item => item.id === 'payment-support'));
@@ -49,20 +51,20 @@ const PaymentStep3 = () => {
 
   const handleSubmit = async () => {
     try {
-      const serviceData = { ...projectData?.payment, testing, timeline, notes };
+      const serviceData = { ...projectData?.payment, testing, timeline, timelineMultiplier, notes };
       await updateProjectData({ payment: serviceData });
       
       if (isMultiService) {
         await handleMultiServiceComplete(serviceData);
       } else {
-        navigate('/success');
+        navigate('/project-submitted');
       }
     } catch (error) {
       console.error('Submit error:', error);
     }
   };
 
-  const isValid = testing && timeline;
+  const isValid = testing && timeline && timeline.amount > 0;
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#FAFAFA' }}>
@@ -91,13 +93,22 @@ const PaymentStep3 = () => {
               <label style={{ display: 'block', fontSize: '16px', fontWeight: '500', color: '#333', marginBottom: '12px' }}>Testing level *</label>
               <ChipGroup options={testingOptions} selected={testing} onChange={setTesting} themeColor={themeColor} />
             </div>
-            <div style={{ marginBottom: '32px' }}>
+            <div style={{ marginBottom: '16px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                <label style={{ fontSize: '16px', fontWeight: '500', color: '#333' }}>Timeline *</label>
+                <div style={{ fontSize: '16px', fontWeight: '500', color: '#333' }}>Delivery Timeline *</div>
                 <AssistedToggle enabled={supportAssist} onToggle={setSupportAssist} price={70} label="Ongoing support" />
               </div>
-              <ChipGroup options={timelineOptions} selected={timeline} onChange={setTimeline} themeColor={themeColor} />
             </div>
+            <TimelineSelector
+              value={timeline}
+              onChange={(timelineData) => {
+                setTimeline(timelineData);
+                setTimelineMultiplier(timelineData.priceMultiplier);
+              }}
+              serviceComplexity="medium"
+              showPriceImpact={true}
+              style={{ marginBottom: '32px' }}
+            />
             <div style={{ marginBottom: '32px' }}>
               <label style={{ display: 'block', fontSize: '16px', fontWeight: '500', color: '#333', marginBottom: '12px' }}>Additional notes</label>
               <textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Any existing payment accounts, business requirements, or compliance needs..." style={{ width: '100%', padding: '16px', border: '1px solid #E5E7EB', borderRadius: '12px', fontSize: '15px', minHeight: '100px', resize: 'vertical', outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' }} />

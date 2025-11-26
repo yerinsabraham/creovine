@@ -8,6 +8,7 @@ import { useIsMobile } from '../../../hooks/useMediaQuery';
 import { useMultiServiceComplete, useIsMultiService } from '../../../hooks/useMultiService';
 import AssistedToggle from '../../../components/common/AssistedToggle';
 import CartSummary from '../../../components/common/CartSummary';
+import TimelineSelector from '../../../components/common/TimelineSelector';
 import logo from '../../../assets/logo.png';
 
 const FrontendStep4 = () => {
@@ -20,7 +21,8 @@ const FrontendStep4 = () => {
   const isMultiService = useIsMultiService();
 
   const [formData, setFormData] = useState({
-    timeline: projectData?.frontend?.timeline || '',
+    timeline: projectData?.frontend?.timeline || { amount: 7, unit: 'days' },
+    timelineMultiplier: projectData?.frontend?.timelineMultiplier || 1.0,
     deliverableFormat: projectData?.frontend?.deliverableFormat || '',
     documentation: projectData?.frontend?.documentation || false,
     supportNeeds: projectData?.frontend?.supportNeeds || ''
@@ -46,8 +48,8 @@ const FrontendStep4 = () => {
         // Multi-service mode: mark complete and navigate to next service or summary
         await handleMultiServiceComplete(serviceData);
       } else {
-        // Single service mode: go to quote page for pricing
-        navigate('/quote');
+        // Single service mode: go to exciting submitted page
+        navigate('/project-submitted');
       }
     } catch (error) {
       console.error('Submission error:', error);
@@ -71,7 +73,7 @@ const FrontendStep4 = () => {
   };
 
   // Validation
-  const isTimelineValid = formData.timeline.trim();
+  const isTimelineValid = formData.timeline && formData.timeline.amount > 0;
   const isFormatValid = formData.deliverableFormat.trim();
   
   const isFormValid = isTimelineValid && isFormatValid;
@@ -226,43 +228,17 @@ const FrontendStep4 = () => {
             padding: isMobile ? '24px' : '40px',
             border: '1px solid rgba(255, 255, 255, 0.1)'
           }}>
-            {/* Timeline */}
-            <div style={{ marginBottom: '32px' }}>
-              <label style={{
-                display: 'block',
-                fontSize: '16px',
-                fontWeight: '700',
-                color: '#FFFFFF',
-                marginBottom: '12px'
-              }}>
-                When do you need this completed? *
-              </label>
-              <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-                {timelineOptions.map(option => (
-                  <button
-                    key={option}
-                    onClick={() => handleInputChange('timeline', option)}
-                    style={{
-                      padding: '14px 24px',
-                      fontSize: '15px',
-                      fontWeight: '600',
-                      color: formData.timeline === option ? '#FFFFFF' : 'rgba(255, 255, 255, 0.7)',
-                      backgroundColor: formData.timeline === option 
-                        ? 'rgba(36, 151, 249, 0.2)' 
-                        : 'rgba(255, 255, 255, 0.05)',
-                      border: formData.timeline === option 
-                        ? '2px solid #2497F9' 
-                        : '2px solid rgba(255, 255, 255, 0.1)',
-                      borderRadius: '12px',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease'
-                    }}
-                  >
-                    {option}
-                  </button>
-                ))}
-              </div>
-            </div>
+            {/* Timeline Selector */}
+            <TimelineSelector
+              value={formData.timeline}
+              onChange={(timelineData) => {
+                handleInputChange('timeline', timelineData);
+                handleInputChange('timelineMultiplier', timelineData.priceMultiplier);
+              }}
+              serviceComplexity="medium"
+              showPriceImpact={true}
+              style={{ marginBottom: '32px' }}
+            />
 
             {/* Deliverable Format */}
             <div style={{ marginBottom: '32px' }}>

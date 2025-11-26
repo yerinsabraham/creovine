@@ -2,11 +2,13 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useProject } from '../context/ProjectContext';
+import { useLocation } from '../context/LocationContext';
 import { useIsMobile } from '../hooks/useMediaQuery';
 import { calculateProjectEstimate, formatCurrency, getEstimatedTimeline } from '../utils/pricingCalculator';
 
 const ProjectQuotePage = () => {
   const { projectData, updatePhaseData } = useProject();
+  const { location, currency, paymentProvider, loading: locationLoading } = useLocation();
   const [estimate, setEstimate] = useState(null);
   const [timeline, setTimeline] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -14,8 +16,10 @@ const ProjectQuotePage = () => {
   const isMobile = useIsMobile();
 
   useEffect(() => {
-    if (projectData) {
-      const calculatedEstimate = calculateProjectEstimate(projectData);
+    if (projectData && !locationLoading) {
+      // Calculate estimate with user's country for localized pricing
+      const countryCode = location?.country || 'US';
+      const calculatedEstimate = calculateProjectEstimate(projectData, countryCode);
       const calculatedTimeline = getEstimatedTimeline(calculatedEstimate);
       setEstimate(calculatedEstimate);
       setTimeline(calculatedTimeline);
@@ -24,12 +28,14 @@ const ProjectQuotePage = () => {
       updatePhaseData('estimate', {
         ...calculatedEstimate,
         timeline: calculatedTimeline,
+        countryCode,
+        paymentProvider,
         createdAt: new Date().toISOString()
       });
       
       setLoading(false);
     }
-  }, [projectData]);
+  }, [projectData, location, locationLoading]);
 
   const handleProceedToPayment = () => {
     // Navigate to payment page (implement Stripe/Paystack checkout)
@@ -161,8 +167,20 @@ const ProjectQuotePage = () => {
               WebkitTextFillColor: 'transparent',
               lineHeight: '1'
             }}>
-              {formatCurrency(estimate.total)}
+              {formatCurrency(estimate.total, estimate.currency)}
             </div>
+            
+            {/* Show currency info for Nigeria */}
+            {currency?.code === 'NGN' && (
+              <div style={{
+                marginTop: '8px',
+                fontSize: '14px',
+                color: '#29BD98',
+                fontWeight: '600'
+              }}>
+                🇳🇬 Special Nigeria pricing - Already discounted!
+              </div>
+            )}
             
             {estimate.discount > 0 && (
               <div style={{ marginTop: '16px' }}>
@@ -172,7 +190,7 @@ const ProjectQuotePage = () => {
                   textDecoration: 'line-through',
                   marginRight: '12px'
                 }}>
-                  {formatCurrency(estimate.subtotal)}
+                  {formatCurrency(estimate.subtotal, estimate.currency)}
                 </span>
                 <span style={{
                   fontSize: '16px',
@@ -182,7 +200,7 @@ const ProjectQuotePage = () => {
                   padding: '4px 12px',
                   borderRadius: '8px'
                 }}>
-                  Save {formatCurrency(estimate.discount)}
+                  Save {formatCurrency(estimate.discount, estimate.currency)}
                 </span>
               </div>
             )}
@@ -254,7 +272,7 @@ const ProjectQuotePage = () => {
                   fontWeight: '700',
                   color: '#29BD98'
                 }}>
-                  {formatCurrency(item.price)}
+                  {formatCurrency(item.localPrice || item.price, estimate.currency)}
                 </div>
               </div>
             ))}
@@ -280,7 +298,7 @@ const ProjectQuotePage = () => {
                   fontWeight: '700',
                   color: '#29BD98'
                 }}>
-                  -{formatCurrency(estimate.discount)}
+                  -{formatCurrency(estimate.discount, estimate.currency)}
                 </div>
               </div>
             )}

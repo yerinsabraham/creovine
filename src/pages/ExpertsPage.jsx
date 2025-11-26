@@ -1,26 +1,86 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { FaUserCircle, FaCode, FaMobile, FaPalette, FaServer, FaRocket, FaChartLine } from 'react-icons/fa';
+import { FaUserCircle, FaCode, FaMobile, FaPalette, FaServer, FaRocket, FaChartLine, FaLifeRing } from 'react-icons/fa';
 import { useMediaQuery } from '../hooks/useMediaQuery';
 import { useAuth } from '../context/AuthContext';
+import { useProject } from '../context/ProjectContext';
 import ExpertAuthModal from '../components/auth/ExpertAuthModal';
+import ExpertLockModal from '../components/experts/ExpertLockModal';
+import ExpertCard from '../components/experts/ExpertCard';
+import { 
+  checkExpertAccess, 
+  sortExpertsWithSupportFirst,
+  EXPERT_CATEGORIES,
+  ACCESS_LEVELS 
+} from '../utils/expertAccess';
 import logo from '../assets/logo.png';
 
 const ExpertsPage = () => {
   const navigate = useNavigate();
   const { currentUser } = useAuth();
+  const { projectData } = useProject();
   const isMobile = useMediaQuery('(max-width: 768px)');
   const [showLoginModal, setShowLoginModal] = useState(false);
+  const [showLockModal, setShowLockModal] = useState(false);
   const [selectedExpert, setSelectedExpert] = useState(null);
+  const [userProjects, setUserProjects] = useState(null);
+
+  // Load user projects data (simulated - you'll connect to Firestore)
+  useEffect(() => {
+    if (currentUser && projectData) {
+      // Build user projects object from context
+      const hasSubmittedProject = projectData?.phases?.primaryService ? true : false;
+      const services = [];
+      
+      if (projectData?.phases?.primaryService) {
+        services.push(projectData.phases.primaryService);
+      }
+      if (projectData?.phases?.addOns) {
+        services.push(...projectData.phases.addOns);
+      }
+
+      setUserProjects({
+        hasSubmittedProject,
+        projects: hasSubmittedProject ? [{
+          services,
+          isNew: true
+        }] : [],
+        hasApprovedProject: false,
+        isPremium: false
+      });
+    } else {
+      setUserProjects(null);
+    }
+  }, [currentUser, projectData]);
 
   const handleExpertClick = (expert) => {
-    if (!currentUser) {
+    // Check access
+    const accessCheck = checkExpertAccess(expert, currentUser, userProjects);
+    
+    if (!accessCheck.canAccess) {
+      // Handle login requirement
+      if (accessCheck.reason === 'login-required') {
+        setSelectedExpert(expert);
+        setShowLoginModal(true);
+        return;
+      }
+      
+      // Show lock modal for other restrictions
       setSelectedExpert(expert);
-      setShowLoginModal(true);
+      setShowLockModal(true);
       return;
     }
+
+    // Access granted - navigate to chat
     navigate(`/chat/${expert.id}`);
+  };
+
+  const handleLockModalAction = (action) => {
+    if (action === 'login') {
+      setShowLockModal(false);
+      setShowLoginModal(true);
+    }
   };
 
   const handleAuthSuccess = () => {
@@ -32,12 +92,26 @@ const ExpertsPage = () => {
 
   const experts = [
     {
+      id: 'support-expert',
+      name: 'General Support',
+      specialty: 'Platform Support & Guidance',
+      expertise: 'FAQs, Pricing, Getting Started, Project Help',
+      icon: FaLifeRing,
+      color: '#29BD98',
+      category: EXPERT_CATEGORIES.SUPPORT,
+      accessLevel: ACCESS_LEVELS.PUBLIC,
+      description: 'Start here! Get help with anything - pricing, platform questions, or project guidance.',
+      isPriority: true
+    },
+    {
       id: 'frontend-specialist',
       name: 'Sarah',
       specialty: 'Frontend Engineering',
       expertise: 'React, Vue, Next.js, UI/UX',
       icon: FaCode,
-      color: '#29BD98',
+      color: '#2497F9',
+      category: EXPERT_CATEGORIES.FRONTEND,
+      accessLevel: ACCESS_LEVELS.PROJECT_SUBMITTED,
       description: 'Expert in building responsive, performant frontend applications'
     },
     {
@@ -46,7 +120,9 @@ const ExpertsPage = () => {
       specialty: 'Backend Architecture',
       expertise: 'Node.js, Python, APIs, Databases',
       icon: FaServer,
-      color: '#2497F9',
+      color: '#8B5CF6',
+      category: EXPERT_CATEGORIES.BACKEND,
+      accessLevel: ACCESS_LEVELS.PROJECT_SUBMITTED,
       description: 'Specialized in scalable backend systems and API design'
     },
     {
@@ -55,7 +131,9 @@ const ExpertsPage = () => {
       specialty: 'Mobile App Development',
       expertise: 'React Native, Flutter, iOS, Android',
       icon: FaMobile,
-      color: '#8B5CF6',
+      color: '#F59E0B',
+      category: EXPERT_CATEGORIES.MOBILE,
+      accessLevel: ACCESS_LEVELS.PROJECT_SUBMITTED,
       description: 'Cross-platform mobile app development expert'
     },
     {
@@ -64,7 +142,9 @@ const ExpertsPage = () => {
       specialty: 'UI/UX Design',
       expertise: 'Figma, Design Systems, User Research',
       icon: FaPalette,
-      color: '#F59E0B',
+      color: '#EF4444',
+      category: EXPERT_CATEGORIES.DESIGN,
+      accessLevel: ACCESS_LEVELS.PROJECT_SUBMITTED,
       description: 'Creating beautiful, user-centered design experiences'
     },
     {
@@ -73,7 +153,9 @@ const ExpertsPage = () => {
       specialty: 'Product Strategy',
       expertise: 'MVP Planning, Market Research, Growth',
       icon: FaRocket,
-      color: '#EF4444',
+      color: '#10B981',
+      category: EXPERT_CATEGORIES.PRODUCT,
+      accessLevel: ACCESS_LEVELS.PROJECT_APPROVED,
       description: 'Helping turn ideas into successful products'
     },
     {
@@ -82,10 +164,15 @@ const ExpertsPage = () => {
       specialty: 'Growth Marketing',
       expertise: 'SEO, Content, Analytics, Conversion',
       icon: FaChartLine,
-      color: '#10B981',
+      color: '#6366F1',
+      category: EXPERT_CATEGORIES.MARKETING,
+      accessLevel: ACCESS_LEVELS.PROJECT_APPROVED,
       description: 'Driving user acquisition and product growth'
     }
   ];
+
+  // Sort experts with support first
+  const sortedExperts = sortExpertsWithSupportFirst(experts);
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#15293A' }}>
@@ -205,6 +292,31 @@ const ExpertsPage = () => {
           </div>
         </motion.div>
 
+        {/* Support Callout */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          style={{
+            backgroundColor: 'rgba(41, 189, 152, 0.1)',
+            border: '2px solid rgba(41, 189, 152, 0.3)',
+            borderRadius: '16px',
+            padding: isMobile ? '20px' : '24px',
+            marginBottom: '32px',
+            textAlign: 'center'
+          }}
+        >
+          <p style={{
+            fontSize: isMobile ? '14px' : '16px',
+            color: '#29BD98',
+            fontWeight: '600',
+            margin: 0,
+            lineHeight: '1.6'
+          }}>
+            ⭐ New here? <strong>Start with General Support!</strong> They'll guide you through the platform and help unlock specialized experts.
+          </p>
+        </motion.div>
+
         {/* Experts Grid */}
         <div style={{
           display: 'grid',
@@ -212,130 +324,55 @@ const ExpertsPage = () => {
           gap: isMobile ? '20px' : '32px',
           marginBottom: isMobile ? '40px' : '60px'
         }}>
-          {experts.map((expert, index) => {
-            const IconComponent = expert.icon;
+          {sortedExperts.map((expert, index) => {
+            const accessCheck = checkExpertAccess(expert, currentUser, userProjects);
+            const isSupport = expert.category === EXPERT_CATEGORIES.SUPPORT;
+            
             return (
               <motion.div
                 key={expert.id}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: index * 0.1 }}
-                onClick={() => handleExpertClick(expert)}
                 style={{
-                  backgroundColor: '#214055',
-                  borderRadius: '24px',
-                  padding: isMobile ? '24px' : '40px',
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
-                  cursor: 'pointer',
-                  transition: 'all 0.3s ease',
-                  position: 'relative',
-                  overflow: 'hidden'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = 'translateY(-8px)';
-                  e.currentTarget.style.boxShadow = '0 20px 40px rgba(0, 0, 0, 0.3)';
-                  e.currentTarget.style.borderColor = expert.color;
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.boxShadow = 'none';
-                  e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+                  position: 'relative'
                 }}
               >
-                {/* Background Gradient */}
-                <div style={{
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  height: '4px',
-                  background: `linear-gradient(90deg, ${expert.color}, ${expert.color}80)`
-                }} />
+                {/* Priority Badge for Support */}
+                {isSupport && (
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ type: 'spring', delay: 0.5 }}
+                    style={{
+                      position: 'absolute',
+                      top: '-10px',
+                      left: '50%',
+                      transform: 'translateX(-50%)',
+                      padding: '6px 16px',
+                      background: 'linear-gradient(135deg, #29BD98, #1E9F7F)',
+                      borderRadius: '20px',
+                      fontSize: '12px',
+                      fontWeight: '700',
+                      color: '#FFFFFF',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.5px',
+                      boxShadow: '0 4px 12px rgba(41, 189, 152, 0.5)',
+                      zIndex: 10,
+                      border: '2px solid #15293A'
+                    }}
+                  >
+                    ⭐ START HERE
+                  </motion.div>
+                )}
 
-                {/* Avatar */}
-                <div style={{
-                  width: '80px',
-                  height: '80px',
-                  borderRadius: '50%',
-                  background: `linear-gradient(135deg, ${expert.color}20, ${expert.color}10)`,
-                  border: `3px solid ${expert.color}40`,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  marginBottom: '24px'
-                }}>
-                  <IconComponent style={{ fontSize: '36px', color: expert.color }} />
-                </div>
-
-                {/* Expert Info */}
-                <h3 style={{
-                  fontSize: '24px',
-                  fontWeight: '700',
-                  color: '#FFFFFF',
-                  marginBottom: '8px'
-                }}>
-                  {expert.name}
-                </h3>
-                <p style={{
-                  fontSize: '16px',
-                  fontWeight: '600',
-                  color: expert.color,
-                  marginBottom: '16px'
-                }}>
-                  {expert.specialty}
-                </p>
-                <p style={{
-                  fontSize: '14px',
-                  color: 'rgba(255, 255, 255, 0.6)',
-                  marginBottom: '16px',
-                  lineHeight: '1.6'
-                }}>
-                  {expert.description}
-                </p>
-                <div style={{
-                  padding: '12px 16px',
-                  backgroundColor: 'rgba(21, 41, 58, 0.8)',
-                  borderRadius: '12px',
-                  border: '1px solid rgba(255, 255, 255, 0.05)'
-                }}>
-                  <p style={{
-                    fontSize: '12px',
-                    color: 'rgba(255, 255, 255, 0.5)',
-                    marginBottom: '4px',
-                    fontWeight: '600',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.5px'
-                  }}>
-                    Expertise
-                  </p>
-                  <p style={{
-                    fontSize: '13px',
-                    color: 'rgba(255, 255, 255, 0.8)',
-                    margin: 0,
-                    fontWeight: '500'
-                  }}>
-                    {expert.expertise}
-                  </p>
-                </div>
-
-                {/* CTA */}
-                <div style={{
-                  marginTop: '24px',
-                  padding: '12px',
-                  background: `linear-gradient(135deg, ${expert.color}15, ${expert.color}05)`,
-                  borderRadius: '12px',
-                  textAlign: 'center',
-                  border: `1px solid ${expert.color}30`
-                }}>
-                  <p style={{
-                    fontSize: '14px',
-                    fontWeight: '700',
-                    color: expert.color,
-                    margin: 0
-                  }}>
-                    Start Conversation →
-                  </p>
-                </div>
+                <ExpertCard
+                  expert={expert}
+                  canAccess={accessCheck.canAccess}
+                  isNewlyUnlocked={accessCheck.isNewlyUnlocked}
+                  onClick={() => handleExpertClick(expert)}
+                  isMobile={isMobile}
+                />
               </motion.div>
             );
           })}
@@ -450,6 +487,19 @@ const ExpertsPage = () => {
         }}
         onSuccess={handleAuthSuccess}
         expertName={selectedExpert?.name || 'our expert'}
+      />
+
+      {/* Expert Lock Modal */}
+      <ExpertLockModal
+        isOpen={showLockModal}
+        onClose={() => {
+          setShowLockModal(false);
+          setSelectedExpert(null);
+        }}
+        expertName={selectedExpert?.name || 'this expert'}
+        expertColor={selectedExpert?.color || '#29BD98'}
+        unlockPath={checkExpertAccess(selectedExpert, currentUser, userProjects).unlockPath}
+        onAction={handleLockModalAction}
       />
     </div>
   );

@@ -74,7 +74,7 @@ const Phase4Page = () => {
   ];
 
   const integrationOptions = [
-    { id: 'stripe', label: 'Stripe Payments', icon: '💳' },
+    { id: 'stripe', label: 'Stripe', icon: '💳' },
     { id: 'paypal', label: 'PayPal', icon: '💰' },
     { id: 'twilio', label: 'Twilio SMS', icon: '📱' },
     { id: 'sendgrid', label: 'SendGrid Email', icon: '📧' },

@@ -56,6 +56,7 @@ import RefactorStep2 from './pages/onboarding/refactor/RefactorStep2';
 import RefactorStep3 from './pages/onboarding/refactor/RefactorStep3';
 import AdminDashboard from './pages/AdminDashboard';
 import SuccessPage from './pages/SuccessPage';
+import ProjectSubmittedPage from './pages/ProjectSubmittedPage';
 import MultiServiceSummary from './pages/MultiServiceSummary';
 import ProjectQuotePage from './pages/ProjectQuotePage';
 import UserDashboard from './pages/UserDashboard';
@@ -225,6 +226,14 @@ function App() {
           element={
             <ProtectedRoute>
               <SuccessPage />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/project-submitted" 
+          element={
+            <ProtectedRoute>
+              <ProjectSubmittedPage />
             </ProtectedRoute>
           } 
         />

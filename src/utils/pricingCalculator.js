@@ -2,11 +2,14 @@
  * Pricing Calculator - Estimates project cost based on selections
  * 
  * Pricing Strategy:
- * - Base price per service type
+ * - Base price per service type (USD base)
  * - Complexity multipliers based on features selected
  * - Multi-service bundle discounts
  * - Custom services get "Starting from" pricing
+ * - Geo-based pricing (Nigeria gets discounted rounded prices in NGN)
  */
+
+import { getLocalizedPrice } from './geolocation';
 
 // Base prices for each service (in USD)
 const BASE_PRICES = {
@@ -199,9 +202,11 @@ const calculatePaymentComplexity = (data) => {
 /**
  * Calculate total project estimate
  * @param {Object} projectData - Full project data from Firestore
+ * @param {string} countryCode - Country code for currency conversion
+ * @param {number} timelineMultiplier - Price multiplier based on timeline urgency (default 1.0)
  * @returns {Object} - { total, breakdown, requiresConsultation, discount }
  */
-export const calculateProjectEstimate = (projectData) => {
+export const calculateProjectEstimate = (projectData, countryCode = 'US', timelineMultiplier = 1.0) => {
   const phases = projectData?.phases || {};
   const primaryService = phases.primaryService;
   const addOns = phases.addOns || [];
@@ -211,7 +216,10 @@ export const calculateProjectEstimate = (projectData) => {
       total: 0,
       breakdown: [],
       requiresConsultation: false,
-      discount: 0
+      discount: 0,
+      currency: 'USD',
+      currencySymbol: '$',
+      timelineMultiplier: 1.0
     };
   }
 
@@ -220,7 +228,7 @@ export const calculateProjectEstimate = (projectData) => {
   let subtotal = 0;
   let requiresConsultation = false;
 
-  // Calculate each service
+  // Calculate each service (in USD first)
   services.forEach(service => {
     const serviceId = service.id;
     const basePrice = BASE_PRICES[serviceId] || 1000;
@@ -255,15 +263,34 @@ export const calculateProjectEstimate = (projectData) => {
     discount = Math.round(subtotal * 0.15); // 15% discount for 4+ services
   }
 
-  const total = subtotal - discount;
+  // Apply timeline multiplier AFTER bundle discount
+  const totalAfterDiscount = subtotal - discount;
+  const totalUSD = Math.round(totalAfterDiscount * timelineMultiplier);
+
+  // Convert to local currency
+  const localizedTotal = getLocalizedPrice(totalUSD, countryCode);
+  const localizedSubtotal = getLocalizedPrice(subtotal, countryCode);
+  const localizedDiscount = getLocalizedPrice(discount, countryCode);
+
+  // Convert breakdown to local currency
+  const localizedBreakdown = breakdown.map(item => ({
+    ...item,
+    localPrice: getLocalizedPrice(item.price, countryCode).amount,
+    localBasePrice: getLocalizedPrice(item.basePrice, countryCode).amount,
+  }));
 
   return {
-    total,
-    subtotal,
-    breakdown,
+    total: localizedTotal.amount,
+    subtotal: localizedSubtotal.amount,
+    breakdown: localizedBreakdown,
     requiresConsultation,
-    discount,
-    serviceCount: services.length
+    discount: localizedDiscount.amount,
+    serviceCount: services.length,
+    currency: localizedTotal.currency,
+    currencySymbol: localizedTotal.symbol,
+    formatted: localizedTotal.formatted,
+    timelineMultiplier: timelineMultiplier,
+    baseTotal: localizedTotal.amount / timelineMultiplier // Original price before timeline adjustment
   };
 };
 
@@ -275,12 +302,16 @@ const getComplexityLabel = (multiplier) => {
 };
 
 /**
- * Format currency
+ * Format currency based on currency code
  */
-export const formatCurrency = (amount) => {
+export const formatCurrency = (amount, currencyCode = 'USD') => {
+  if (currencyCode === 'NGN') {
+    return `₦${amount.toLocaleString()}`;
+  }
+  
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
-    currency: 'USD',
+    currency: currencyCode,
     minimumFractionDigits: 0,
     maximumFractionDigits: 0
   }).format(amount);

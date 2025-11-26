@@ -9,6 +9,7 @@ import { useMultiServiceComplete, useIsMultiService } from '../../../hooks/useMu
 import AssistedToggle from '../../../components/common/AssistedToggle';
 import CartSummary from '../../../components/common/CartSummary';
 import ChipGroup from '../../../components/common/ChipGroup';
+import TimelineSelector from '../../../components/common/TimelineSelector';
 import logo from '../../../assets/logo.png';
 
 const BackendStep4 = () => {
@@ -24,7 +25,8 @@ const BackendStep4 = () => {
     hostingPreference: projectData?.backend?.hostingPreference || '',
     securityRequirements: projectData?.backend?.securityRequirements || [],
     scalingNeeds: projectData?.backend?.scalingNeeds || '',
-    timeline: projectData?.backend?.timeline || '',
+    timeline: projectData?.backend?.timeline || { amount: 7, unit: 'days' },
+    timelineMultiplier: projectData?.backend?.timelineMultiplier || 1.0,
     documentation: projectData?.backend?.documentation || false,
     testing: projectData?.backend?.testing || false,
     supportNeeds: projectData?.backend?.supportNeeds || ''
@@ -49,7 +51,7 @@ const BackendStep4 = () => {
       if (isMultiService) {
         await handleMultiServiceComplete(serviceData);
       } else {
-        navigate('/quote');
+        navigate('/project-submitted');
       }
     } catch (error) {
       console.error('Submit error:', error);
@@ -68,7 +70,7 @@ const BackendStep4 = () => {
 
   // Validation
   const isHostingValid = formData.hostingPreference || hasItem('deployment-assist');
-  const isTimelineValid = formData.timeline.trim();
+  const isTimelineValid = formData.timeline && formData.timeline.amount > 0;
   const isFormValid = isHostingValid && isTimelineValid;
 
   const hostingOptions = [
@@ -336,42 +338,17 @@ const BackendStep4 = () => {
               </div>
             </div>
 
-            {/* Timeline */}
-            <div style={{ marginBottom: '32px' }}>
-              <label style={{
-                display: 'block',
-                fontSize: '16px',
-                fontWeight: '700',
-                color: '#FFFFFF',
-                marginBottom: '12px'
-              }}>
-                When do you need this? *
-              </label>
-              <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-                {timelineOptions.map(option => (
-                  <button
-                    key={option}
-                    onClick={() => handleInputChange('timeline', option)}
-                    style={{
-                      padding: '12px 20px',
-                      fontSize: '14px',
-                      fontWeight: '600',
-                      color: formData.timeline === option ? '#FFFFFF' : 'rgba(255, 255, 255, 0.7)',
-                      backgroundColor: formData.timeline === option 
-                        ? 'rgba(99, 102, 241, 0.2)' 
-                        : 'rgba(255, 255, 255, 0.05)',
-                      border: formData.timeline === option 
-                        ? '2px solid #6366F1' 
-                        : '2px solid rgba(255, 255, 255, 0.1)',
-                      borderRadius: '12px',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    {option}
-                  </button>
-                ))}
-              </div>
-            </div>
+            {/* Timeline Selector */}
+            <TimelineSelector
+              value={formData.timeline}
+              onChange={(timelineData) => {
+                handleInputChange('timeline', timelineData);
+                handleInputChange('timelineMultiplier', timelineData.priceMultiplier);
+              }}
+              serviceComplexity="medium"
+              showPriceImpact={true}
+              style={{ marginBottom: '32px' }}
+            />
 
             {/* Documentation */}
             <div style={{ marginBottom: '24px' }}>
