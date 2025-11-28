@@ -498,7 +498,7 @@ const ExpertsPage = () => {
         }}
         expertName={selectedExpert?.name || 'this expert'}
         expertColor={selectedExpert?.color || '#29BD98'}
-        unlockPath={checkExpertAccess(selectedExpert, currentUser, userProjects).unlockPath}
+        unlockPath={selectedExpert ? checkExpertAccess(selectedExpert, currentUser, userProjects).unlockPath : 'contact-support'}
         onAction={handleLockModalAction}
       />
     </div>

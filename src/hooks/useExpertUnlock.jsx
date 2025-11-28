@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
 import { FaStar } from 'react-icons/fa';
@@ -54,6 +54,7 @@ export const ExpertUnlockNotification = ({ notification, onClose }) => {
 
   return (
     <AnimatePresence>
+      {notification && (
       <motion.div
         initial={{ opacity: 0, y: -100, scale: 0.8 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -190,6 +191,7 @@ export const ExpertUnlockNotification = ({ notification, onClose }) => {
           </div>
         </div>
       </motion.div>
+      )}
     </AnimatePresence>
   );
 };

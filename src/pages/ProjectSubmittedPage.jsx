@@ -5,7 +5,7 @@ import { useProject } from '../context/ProjectContext';
 import { useLocation } from '../context/LocationContext';
 import { useIsMobile } from '../hooks/useMediaQuery';
 import { calculateProjectEstimate, formatCurrency } from '../utils/pricingCalculator';
-import { useExpertUnlock, ExpertUnlockNotification, getUnlockedExpertsForService } from '../hooks/useExpertUnlock';
+import { useExpertUnlock, ExpertUnlockNotification, getUnlockedExpertsForService } from '../hooks/useExpertUnlock.jsx';
 import confetti from 'canvas-confetti';
 
 const ProjectSubmittedPage = () => {

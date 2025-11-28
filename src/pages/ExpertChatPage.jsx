@@ -20,22 +20,24 @@ const ExpertChatPage = () => {
   const textareaRef = useRef(null);
 
   const expertInfo = {
-    'frontend-specialist': { name: 'Sarah', specialty: 'Frontend Engineering', color: '#29BD98' },
-    'backend-architect': { name: 'Michael', specialty: 'Backend Architecture', color: '#2497F9' },
-    'mobile-developer': { name: 'Aisha', specialty: 'Mobile App Development', color: '#8B5CF6' },
-    'ui-ux-designer': { name: 'James', specialty: 'UI/UX Design', color: '#F59E0B' },
-    'product-strategist': { name: 'Emily', specialty: 'Product Strategy', color: '#EF4444' },
-    'marketing-specialist': { name: 'David', specialty: 'Growth Marketing', color: '#10B981' }
+    'support-expert': { name: 'General Support', specialty: 'Platform Support & Guidance', color: '#29BD98' },
+    'frontend-specialist': { name: 'Sarah', specialty: 'Frontend Engineering', color: '#2497F9' },
+    'backend-architect': { name: 'Michael', specialty: 'Backend Architecture', color: '#8B5CF6' },
+    'mobile-developer': { name: 'Aisha', specialty: 'Mobile App Development', color: '#F59E0B' },
+    'ui-ux-designer': { name: 'James', specialty: 'UI/UX Design', color: '#EF4444' },
+    'product-strategist': { name: 'Emily', specialty: 'Product Strategy', color: '#10B981' },
+    'marketing-specialist': { name: 'David', specialty: 'Growth Marketing', color: '#6366F1' }
   };
 
-  const expert = expertInfo[expertId] || expertInfo['frontend-specialist'];
+  const expert = expertInfo[expertId] || expertInfo['support-expert'];
+  const isSupportExpert = expertId === 'support-expert';
 
-  // Redirect to experts page if not logged in
+  // Redirect to experts page if not logged in (except for support expert)
   useEffect(() => {
-    if (!currentUser) {
+    if (!currentUser && !isSupportExpert) {
       navigate('/experts');
     }
-  }, [currentUser, navigate]);
+  }, [currentUser, navigate, isSupportExpert]);
 
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -44,9 +46,11 @@ const ExpertChatPage = () => {
 
   // Load messages from Firestore
   useEffect(() => {
-    if (!currentUser) return;
+    if (!currentUser && !isSupportExpert) return;
 
-    const conversationId = `${currentUser.uid}_${expertId}`;
+    // For support expert without login, use a temporary session ID
+    const userId = currentUser?.uid || `guest_${Date.now()}`;
+    const conversationId = `${userId}_${expertId}`;
     const messagesRef = collection(db, 'conversations', conversationId, 'messages');
     const q = query(messagesRef, orderBy('timestamp', 'asc'));
 
@@ -59,7 +63,7 @@ const ExpertChatPage = () => {
     });
 
     return () => unsubscribe();
-  }, [currentUser, expertId]);
+  }, [currentUser, expertId, isSupportExpert]);
 
   // Auto-resize textarea
   useEffect(() => {
@@ -92,7 +96,15 @@ const ExpertChatPage = () => {
   };
 
   const sendMessage = async () => {
-    if (!inputMessage.trim() || !currentUser || sending) return;
+    if (!inputMessage.trim() || sending) return;
+    
+    // For support expert, allow guest messages but prompt login
+    if (!currentUser && isSupportExpert) {
+      alert('Please sign in to send messages. Click the "Sign In" button at the top.');
+      return;
+    }
+    
+    if (!currentUser) return;
 
     setSending(true);
     const messageText = inputMessage.trim();
@@ -295,10 +307,13 @@ const ExpertChatPage = () => {
           }}>
             <textarea
               ref={textareaRef}
+              id="chat-message-input"
+              name="message"
               value={inputMessage}
               onChange={(e) => setInputMessage(e.target.value)}
               onKeyPress={handleKeyPress}
               placeholder="Type your message... (Use ``` for code blocks, ` for inline code)"
+              aria-label="Chat message input"
               style={{
                 flex: 1,
                 background: 'transparent',

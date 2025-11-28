@@ -255,11 +255,14 @@ const TimelineSelector = ({
           {/* Slider input */}
           <input
             type="range"
+            id="timeline-slider"
+            name="timeline"
             min={currentRange.min}
             max={currentRange.max}
             step={currentRange.step}
             value={timelineAmount}
             onChange={handleSliderChange}
+            aria-label={`Timeline selector: ${getDisplayText()}`}
             style={{
               position: 'relative',
               width: '100%',
