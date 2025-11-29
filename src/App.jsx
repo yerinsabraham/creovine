@@ -54,6 +54,9 @@ import DeploymentStep2 from './pages/onboarding/deployment/DeploymentStep2';
 import RefactorStep1 from './pages/onboarding/refactor/RefactorStep1';
 import RefactorStep2 from './pages/onboarding/refactor/RefactorStep2';
 import RefactorStep3 from './pages/onboarding/refactor/RefactorStep3';
+import WebsiteUpgradeStep1 from './pages/onboarding/website-upgrade/WebsiteUpgradeStep1';
+import WebsiteUpgradeStep2 from './pages/onboarding/website-upgrade/WebsiteUpgradeStep2';
+import WebsiteUpgradeStep3 from './pages/onboarding/website-upgrade/WebsiteUpgradeStep3';
 import AdminDashboard from './pages/AdminDashboard';
 import SuccessPage from './pages/SuccessPage';
 import ProjectSubmittedPage from './pages/ProjectSubmittedPage';
@@ -156,6 +159,11 @@ function App() {
         <Route path="/onboarding/refactor/step1" element={<ProtectedRoute><RefactorStep1 /></ProtectedRoute>} />
         <Route path="/onboarding/refactor/step2" element={<ProtectedRoute><RefactorStep2 /></ProtectedRoute>} />
         <Route path="/onboarding/refactor/step3" element={<ProtectedRoute><RefactorStep3 /></ProtectedRoute>} />
+        
+        {/* Website Update/Upgrade Flow */}
+        <Route path="/onboarding/website-upgrade/step1" element={<ProtectedRoute><WebsiteUpgradeStep1 /></ProtectedRoute>} />
+        <Route path="/onboarding/website-upgrade/step2" element={<ProtectedRoute><WebsiteUpgradeStep2 /></ProtectedRoute>} />
+        <Route path="/onboarding/website-upgrade/step3" element={<ProtectedRoute><WebsiteUpgradeStep3 /></ProtectedRoute>} />
         
         <Route 
           path="/admin" 

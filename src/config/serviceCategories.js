@@ -146,6 +146,15 @@ export const serviceCategories = [
     route: '/onboarding/refactor/step1',
     basePrices: { simple: 200, complex: 2000 },
     popular: false
+  },
+  {
+    id: 'website-upgrade',
+    name: 'Website Update/Upgrade',
+    icon: FaRocket,
+    color: '#8B5CF6',
+    route: '/onboarding/website-upgrade/step1',
+    basePrices: { simple: 300, complex: 3000 },
+    popular: true
   }
 ];
 
