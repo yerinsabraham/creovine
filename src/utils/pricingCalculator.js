@@ -265,9 +265,10 @@ const calculateFullStackComplexity = (projectData) => {
  * @param {Object} projectData - Full project data from Firestore
  * @param {string} countryCode - Country code for currency conversion
  * @param {number} timelineMultiplier - Price multiplier based on timeline urgency (default 1.0)
+ * @param {Object} cart - Cart object with items and total (assisted services)
  * @returns {Object} - { total, breakdown, requiresConsultation, discount }
  */
-export const calculateProjectEstimate = (projectData, countryCode = 'US', timelineMultiplier = 1.0) => {
+export const calculateProjectEstimate = (projectData, countryCode = 'US', timelineMultiplier = 1.0, cart = null) => {
   const phases = projectData?.phases || projectData;
   const primaryService = phases.primaryService;
   const addOns = phases.addOns || [];
@@ -291,8 +292,26 @@ export const calculateProjectEstimate = (projectData, countryCode = 'US', timeli
       requiresConsultation: false
     }];
     
+    // Add cart items (assisted services) to breakdown
+    let cartTotal = 0;
+    if (cart && cart.cartItems && cart.cartItems.length > 0) {
+      cart.cartItems.forEach(item => {
+        breakdown.push({
+          serviceId: item.id,
+          serviceName: item.label,
+          basePrice: item.price,
+          complexity: 1.0,
+          complexityLabel: 'Standard',
+          price: item.price,
+          requiresConsultation: false,
+          isAssistedService: true
+        });
+        cartTotal += item.price;
+      });
+    }
+    
     // Apply timeline multiplier
-    const totalUSD = Math.round(price * timelineMultiplier);
+    const totalUSD = Math.round((price + cartTotal) * timelineMultiplier);
     
     // Convert to local currency
     const localizedTotal = getLocalizedPrice(totalUSD, countryCode);
@@ -304,16 +323,17 @@ export const calculateProjectEstimate = (projectData, countryCode = 'US', timeli
     
     return {
       total: localizedTotal.amount,
-      subtotal: getLocalizedPrice(price, countryCode).amount,
+      subtotal: getLocalizedPrice(price + cartTotal, countryCode).amount,
       breakdown: localizedBreakdown,
       requiresConsultation: false,
       discount: 0,
-      serviceCount: 1,
+      serviceCount: 1 + (cart?.cartItems?.length || 0),
       currency: localizedTotal.currency,
       currencySymbol: localizedTotal.symbol,
       formatted: localizedTotal.formatted,
       timelineMultiplier: timelineMultiplier,
-      baseTotal: localizedTotal.amount / timelineMultiplier
+      baseTotal: localizedTotal.amount / timelineMultiplier,
+      hasAssistedServices: cartTotal > 0
     };
   }
   

@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react';
-import { doc, setDoc, getDoc, onSnapshot, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc, getDoc, onSnapshot, serverTimestamp, deleteDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '../config/firebase';
 import { useAuth } from './AuthContext';
@@ -276,31 +276,41 @@ export const ProjectProvider = ({ children }) => {
     // Filter out metadata fields from phases
     const { primaryService, addOns, serviceCategory, serviceName, completedServices, currentServiceIndex, ...phasesOnly } = dataToSubmit;
 
-    // Create submitted project with userId in document ID for Firestore rules
+    // Update the existing draft project to submitted status instead of creating new one
+    const draftProjectId = `${currentUser.uid}_draft`;
     const submittedProjectId = `${currentUser.uid}_submitted_${Date.now()}`;
-    const projectRef = doc(db, 'projects', submittedProjectId);
-    
-    // Build submission data - only include defined fields
-    const submissionData = {
-      userId: currentUser.uid,
-      userEmail: currentUser.email,
-      userName: currentUser.displayName || currentUser.email,
-      phases: phasesOnly,
-      status: 'submitted',
-      createdAt: serverTimestamp(),
-      submittedAt: serverTimestamp()
-    };
-
-    // Only add metadata if it exists
-    if (primaryService) submissionData.primaryService = primaryService;
-    if (addOns && addOns.length > 0) submissionData.addOns = addOns;
-    if (serviceCategory) submissionData.serviceCategory = serviceCategory;
-    if (serviceName) submissionData.serviceName = serviceName;
-    if (completedServices && completedServices.length > 0) submissionData.completedServices = completedServices;
-    if (typeof currentServiceIndex === 'number') submissionData.currentServiceIndex = currentServiceIndex;
+    const draftRef = doc(db, 'projects', draftProjectId);
+    const submittedRef = doc(db, 'projects', submittedProjectId);
     
     try {
-      await setDoc(projectRef, submissionData);
+      // Get the draft document to preserve createdAt
+      const draftSnap = await getDoc(draftRef);
+      const draftData = draftSnap.exists() ? draftSnap.data() : {};
+      
+      // Build submission data - only include defined fields
+      const submissionData = {
+        userId: currentUser.uid,
+        userEmail: currentUser.email,
+        userName: currentUser.displayName || currentUser.email,
+        phases: phasesOnly,
+        status: 'submitted',
+        createdAt: draftData.createdAt || serverTimestamp(),
+        submittedAt: serverTimestamp()
+      };
+
+      // Only add metadata if it exists
+      if (primaryService) submissionData.primaryService = primaryService;
+      if (addOns && addOns.length > 0) submissionData.addOns = addOns;
+      if (serviceCategory) submissionData.serviceCategory = serviceCategory;
+      if (serviceName) submissionData.serviceName = serviceName;
+      if (completedServices && completedServices.length > 0) submissionData.completedServices = completedServices;
+      if (typeof currentServiceIndex === 'number') submissionData.currentServiceIndex = currentServiceIndex;
+      
+      // Create submitted project
+      await setDoc(submittedRef, submissionData);
+      
+      // Delete the draft
+      await deleteDoc(draftRef);
 
       // Update user onboarding status
       await setDoc(doc(db, 'users', currentUser.uid), {
@@ -317,6 +327,26 @@ export const ProjectProvider = ({ children }) => {
     }
   };
 
+  /**
+   * Delete a project (draft or submitted)
+   */
+  const deleteProject = async (projectId) => {
+    try {
+      if (!currentUser) {
+        throw new Error('User not authenticated');
+      }
+
+      const projectRef = doc(db, 'projects', projectId);
+      await deleteDoc(projectRef);
+      
+      console.log('Project deleted successfully:', projectId);
+      return true;
+    } catch (error) {
+      console.error('Error deleting project:', error);
+      throw error;
+    }
+  };
+
   const value = {
     currentPhase,
     projectData,
@@ -326,6 +356,7 @@ export const ProjectProvider = ({ children }) => {
     updateProjectMetadata,
     goToPhase,
     submitProject,
+    deleteProject,
     markServiceComplete,
     getNextIncompleteService,
     areAllServicesComplete

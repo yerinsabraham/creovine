@@ -17,7 +17,7 @@ const Phase6Page = () => {
   const navigate = useNavigate();
   const { currentUser, logout } = useAuth();
   const { projectData, updatePhaseData, submitProject, goToPhase } = useProject();
-  const { hasItem } = useCart();
+  const { hasItem, cart } = useCart();
   const { location } = useLocation();
   const isMobile = useIsMobile();
 
@@ -57,11 +57,17 @@ const Phase6Page = () => {
       // Calculate estimate
       const countryCode = location?.country || 'US';
       const timelineMultiplier = formData.timelineMultiplier || 1.0;
-      const calculatedEstimate = calculateProjectEstimate(projectData, countryCode, timelineMultiplier);
+      const calculatedEstimate = calculateProjectEstimate(projectData, countryCode, timelineMultiplier, cart);
       setEstimate(calculatedEstimate);
       
       // Submit project to Firestore
       await submitProject();
+      
+      // Block browser back button to prevent resubmission
+      window.history.pushState(null, '', window.location.href);
+      window.onpopstate = function() {
+        window.history.pushState(null, '', window.location.href);
+      };
       
       // Show the estimate modal
       setShowEstimateModal(true);

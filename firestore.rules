@@ -103,6 +103,20 @@ service cloud.firestore {
       allow read, write: if isAdmin();
     }
     
+    // User messages - for in-app communication
+    match /user_messages/{messageId} {
+      // Admin can read/write all messages (to send to users)
+      allow read, write: if isAdmin();
+      
+      // Users can read their own messages
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      
+      // Users can update their own messages (to mark as read)
+      allow update: if isAuthenticated() && 
+                       resource.data.userId == request.auth.uid &&
+                       request.resource.data.userId == resource.data.userId;
+    }
+    
     // Default deny all other access
     match /{document=**} {
       allow read, write: if false;

@@ -5,24 +5,41 @@ import { useAuth } from '../context/AuthContext';
 import { useProject } from '../context/ProjectContext';
 import { useIsMobile } from '../hooks/useMediaQuery';
 import { formatCurrency } from '../utils/pricingCalculator';
-import { collection, query, where, getDocs, doc, updateDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, updateDoc, addDoc, serverTimestamp, onSnapshot } from 'firebase/firestore';
 import { db } from '../config/firebase';
+import MessagesPanel from '../components/common/MessagesPanel';
 
 const UserDashboard = () => {
   const { currentUser, logout } = useAuth();
-  const { projectData } = useProject();
+  const { projectData, deleteProject } = useProject();
   const [projects, setProjects] = useState([]);
   const [selectedProject, setSelectedProject] = useState(null);
   const [loading, setLoading] = useState(true);
   const [editMode, setEditMode] = useState(false);
+  const [showMessages, setShowMessages] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
   const navigate = useNavigate();
   const isMobile = useIsMobile();
 
   useEffect(() => {
     if (currentUser) {
       fetchUserProjects();
+      subscribeToMessages();
     }
   }, [currentUser]);
+
+  const subscribeToMessages = () => {
+    const q = query(
+      collection(db, 'user_messages'),
+      where('userId', '==', currentUser.uid),
+      where('read', '==', false)
+    );
+    
+    return onSnapshot(q, (snapshot) => {
+      setUnreadCount(snapshot.size);
+    });
+  };
 
   const fetchUserProjects = async () => {
     try {
@@ -64,6 +81,8 @@ const UserDashboard = () => {
     switch (status) {
       case 'draft': return '#FFA500';
       case 'submitted': return '#2497F9';
+      case 'payment-pending': return '#FFA500';
+      case 'payment-confirmed': return '#29BD98';
       case 'in-progress': return '#29BD98';
       case 'review': return '#9B59B6';
       case 'completed': return '#27AE60';
@@ -74,13 +93,41 @@ const UserDashboard = () => {
 
   const getStatusLabel = (status) => {
     switch (status) {
-      case 'draft': return 'Draft';
-      case 'submitted': return 'Submitted';
+      case 'draft': return 'Incomplete';
+      case 'submitted': return 'Awaiting Review';
+      case 'payment-pending': return 'Payment Pending';
+      case 'payment-confirmed': return 'Payment Confirmed';
       case 'in-progress': return 'In Progress';
       case 'review': return 'Under Review';
       case 'completed': return 'Completed';
       case 'on-hold': return 'On Hold';
       default: return 'Unknown';
+    }
+  };
+
+  const getProjectName = (project) => {
+    // Try different possible locations for project name
+    return project.phases?.identity?.projectName || 
+           project.phases?.vision?.projectName || 
+           project.identity?.projectName ||
+           project.vision?.projectName ||
+           'Untitled Project';
+  };
+
+  const getProjectDescription = (project) => {
+    return project.phases?.identity?.description ||
+           project.phases?.vision?.corePurpose ||
+           project.identity?.description ||
+           project.vision?.corePurpose ||
+           'No description';
+  };
+
+  const handleProjectClick = (project) => {
+    setSelectedProject(project);
+    
+    // If draft, navigate to continue where they left off
+    if (project.status === 'draft' && project.currentPhase) {
+      navigate(`/onboarding/phase${project.currentPhase}`);
     }
   };
 
@@ -93,9 +140,88 @@ const UserDashboard = () => {
     });
   };
 
-  const handleEditRequest = () => {
-    setEditMode(true);
-    // In real implementation, this would notify the admin/expert
+  // Helper to check if project can be deleted
+  const canDeleteProject = (status) => {
+    if (!status) return false;
+    
+    // Allow deletion for: draft, submitted, payment-pending
+    // Lock for: payment-confirmed, in-progress, review, completed
+    const deletableStatuses = ['draft', 'submitted', 'payment-pending'];
+    return deletableStatuses.includes(status);
+  };
+
+  // Delete project before payment is confirmed
+  const handleDeleteSubmittedProject = async () => {
+    const confirmed = window.confirm(
+      `Delete "${getProjectName(selectedProject)}"?\n\nThis project will be permanently removed. This action cannot be undone.`
+    );
+    
+    if (!confirmed) return;
+    
+    try {
+      // Create notification for admin
+      await addDoc(collection(db, 'adminNotifications'), {
+        type: 'project-deleted',
+        projectId: selectedProject.id,
+        projectName: getProjectName(selectedProject),
+        userId: currentUser.uid,
+        userEmail: currentUser.email,
+        userName: currentUser.displayName || currentUser.email,
+        status: selectedProject.status,
+        createdAt: serverTimestamp()
+      });
+
+      // Delete the project
+      await deleteProject(selectedProject.id);
+      
+      // Refresh projects
+      await fetchUserProjects();
+      
+      alert('Project deleted successfully.');
+    } catch (error) {
+      console.error('Error deleting project:', error);
+      alert('Failed to delete project. Please try again.');
+    }
+  };
+
+  const handleDeleteProject = async (projectId, projectName) => {
+    const confirmed = window.confirm(
+      `Are you sure you want to delete "${projectName}"?\n\nThis action cannot be undone.`
+    );
+    
+    if (!confirmed) return;
+    
+    try {
+      // Create notification for admin if not a draft
+      const projectToDelete = projects.find(p => p.id === projectId);
+      if (projectToDelete && projectToDelete.status !== 'draft') {
+        await addDoc(collection(db, 'adminNotifications'), {
+          type: 'project-deleted',
+          projectId: projectId,
+          projectName: projectName,
+          userId: currentUser.uid,
+          userEmail: currentUser.email,
+          userName: currentUser.displayName || currentUser.email,
+          status: projectToDelete.status,
+          createdAt: serverTimestamp()
+        });
+      }
+
+      await deleteProject(projectId);
+      
+      // Refresh the projects list
+      await fetchUserProjects();
+      
+      // If deleted project was selected, select another one
+      if (selectedProject?.id === projectId) {
+        setSelectedProject(projects.length > 1 ? projects.find(p => p.id !== projectId) : null);
+      }
+      
+      alert('Project deleted successfully.');
+    } catch (error) {
+      console.error('Error deleting project:', error);
+      alert('Failed to delete project. Please try again.');
+    }
   };
 
   if (loading) {
@@ -113,6 +239,12 @@ const UserDashboard = () => {
   }
 
   return (
+    <>
+    <MessagesPanel
+      userId={currentUser?.uid}
+      isOpen={showMessages}
+      onClose={() => setShowMessages(false)}
+    />
     <div style={{
       minHeight: '100vh',
       backgroundColor: '#0F1C2E'
@@ -122,7 +254,8 @@ const UserDashboard = () => {
       <header style={{
         backgroundColor: '#15293A',
         borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
-        padding: isMobile ? '16px 20px' : '20px 40px'
+        padding: isMobile ? '16px 20px' : '20px 40px',
+        position: 'relative'
       }}>
         <div style={{
           maxWidth: '1400px',
@@ -139,28 +272,228 @@ const UserDashboard = () => {
             My Dashboard
           </h1>
           
-          <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
-            <div style={{
-              fontSize: '14px',
-              color: 'rgba(255, 255, 255, 0.7)'
-            }}>
-              {currentUser?.displayName || currentUser?.email}
-            </div>
-            <button
-              onClick={logout}
-              style={{
-                backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                border: '1px solid rgba(255, 255, 255, 0.2)',
-                borderRadius: '8px',
-                padding: '8px 16px',
-                color: '#FFFFFF',
+          {/* Desktop Menu */}
+          {!isMobile && (
+            <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+              {/* Messages Button with Badge */}
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setShowMessages(true)}
+                style={{
+                  position: 'relative',
+                  backgroundColor: 'rgba(41, 189, 152, 0.1)',
+                  border: '1px solid rgba(41, 189, 152, 0.3)',
+                  borderRadius: '10px',
+                  padding: '10px 16px',
+                  color: '#29BD98',
+                  fontSize: '20px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}
+              >
+                📬
+                <span style={{
+                  fontSize: '14px',
+                  fontWeight: '600'
+                }}>Messages</span>
+                {unreadCount > 0 && (
+                  <span style={{
+                    position: 'absolute',
+                    top: '-6px',
+                    right: '-6px',
+                    backgroundColor: '#E74C3C',
+                    color: '#FFFFFF',
+                    borderRadius: '12px',
+                    padding: '2px 8px',
+                    fontSize: '11px',
+                    fontWeight: '700',
+                    minWidth: '20px',
+                    textAlign: 'center'
+                  }}>
+                    {unreadCount}
+                  </span>
+                )}
+              </motion.button>
+              
+              <div style={{
                 fontSize: '14px',
-                cursor: 'pointer'
-              }}
-            >
-              Logout
-            </button>
-          </div>
+                color: 'rgba(255, 255, 255, 0.7)'
+              }}>
+                {currentUser?.displayName || currentUser?.email}
+              </div>
+              <button
+                onClick={logout}
+                style={{
+                  backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  borderRadius: '8px',
+                  padding: '8px 16px',
+                  color: '#FFFFFF',
+                  fontSize: '14px',
+                  cursor: 'pointer'
+                }}
+              >
+                Logout
+              </button>
+            </div>
+          )}
+          
+          {/* Mobile Hamburger Menu */}
+          {isMobile && (
+            <div>
+              <motion.button
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setShowMobileMenu(!showMobileMenu)}
+                style={{
+                  position: 'relative',
+                  backgroundColor: 'transparent',
+                  border: 'none',
+                  color: '#FFFFFF',
+                  fontSize: '28px',
+                  cursor: 'pointer',
+                  padding: '8px'
+                }}
+              >
+                {showMobileMenu ? '✕' : '☰'}
+                {unreadCount > 0 && !showMobileMenu && (
+                  <span style={{
+                    position: 'absolute',
+                    top: '4px',
+                    right: '4px',
+                    backgroundColor: '#E74C3C',
+                    color: '#FFFFFF',
+                    borderRadius: '10px',
+                    padding: '2px 6px',
+                    fontSize: '10px',
+                    fontWeight: '700',
+                    minWidth: '18px',
+                    textAlign: 'center'
+                  }}>
+                    {unreadCount}
+                  </span>
+                )}
+              </motion.button>
+              
+              {/* Mobile Dropdown Menu */}
+              <AnimatePresence>
+                {showMobileMenu && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    style={{
+                      position: 'absolute',
+                      top: '100%',
+                      right: '20px',
+                      backgroundColor: '#0F1C2E',
+                      border: '1px solid rgba(255, 255, 255, 0.1)',
+                      borderRadius: '12px',
+                      padding: '8px',
+                      minWidth: '250px',
+                      boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)',
+                      zIndex: 1000,
+                      marginTop: '8px'
+                    }}
+                  >
+                    {/* User Info */}
+                    <div style={{
+                      padding: '12px 16px',
+                      borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+                      marginBottom: '8px'
+                    }}>
+                      <div style={{
+                        fontSize: '14px',
+                        fontWeight: '600',
+                        color: '#FFFFFF',
+                        marginBottom: '4px'
+                      }}>
+                        {currentUser?.displayName || 'User'}
+                      </div>
+                      <div style={{
+                        fontSize: '12px',
+                        color: 'rgba(255, 255, 255, 0.5)'
+                      }}>
+                        {currentUser?.email}
+                      </div>
+                    </div>
+                    
+                    {/* Messages */}
+                    <motion.button
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => {
+                        setShowMessages(true);
+                        setShowMobileMenu(false);
+                      }}
+                      style={{
+                        width: '100%',
+                        backgroundColor: 'transparent',
+                        border: 'none',
+                        borderRadius: '8px',
+                        padding: '12px 16px',
+                        color: '#FFFFFF',
+                        fontSize: '15px',
+                        fontWeight: '500',
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        marginBottom: '4px'
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <span style={{ fontSize: '20px' }}>📬</span>
+                        <span>Messages</span>
+                      </div>
+                      {unreadCount > 0 && (
+                        <span style={{
+                          backgroundColor: '#E74C3C',
+                          color: '#FFFFFF',
+                          borderRadius: '10px',
+                          padding: '2px 8px',
+                          fontSize: '12px',
+                          fontWeight: '600'
+                        }}>
+                          {unreadCount}
+                        </span>
+                      )}
+                    </motion.button>
+                    
+                    {/* Logout */}
+                    <motion.button
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => {
+                        logout();
+                        setShowMobileMenu(false);
+                      }}
+                      style={{
+                        width: '100%',
+                        backgroundColor: 'rgba(231, 76, 60, 0.1)',
+                        border: '1px solid rgba(231, 76, 60, 0.2)',
+                        borderRadius: '8px',
+                        padding: '12px 16px',
+                        color: '#E74C3C',
+                        fontSize: '15px',
+                        fontWeight: '600',
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '12px',
+                        marginTop: '8px'
+                      }}
+                    >
+                      <span style={{ fontSize: '18px' }}>🚪</span>
+                      <span>Logout</span>
+                    </motion.button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          )}
         </div>
       </header>
 
@@ -170,33 +503,7 @@ const UserDashboard = () => {
         padding: isMobile ? '24px 20px' : '40px'
       }}>
         
-        {/* Start New Project Button - Small at top */}
-        {projects.length > 0 && (
-          <div style={{
-            display: 'flex',
-            justifyContent: 'flex-end',
-            marginBottom: '24px'
-          }}>
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => navigate('/get-started')}
-              style={{
-                backgroundColor: '#29BD98',
-                color: '#FFFFFF',
-                border: 'none',
-                borderRadius: '12px',
-                padding: '12px 24px',
-                fontSize: '15px',
-                fontWeight: '600',
-                cursor: 'pointer',
-                boxShadow: '0 4px 16px rgba(41, 189, 152, 0.3)'
-              }}
-            >
-              + Start New Project
-            </motion.button>
-          </div>
-        )}
+
         
         {projects.length === 0 ? (
           <div style={{
@@ -265,23 +572,72 @@ const UserDashboard = () => {
                   <motion.div
                     key={project.id}
                     whileHover={{ scale: 1.02 }}
-                    onClick={() => setSelectedProject(project)}
+                    onClick={() => handleProjectClick(project)}
                     style={{
                       backgroundColor: selectedProject?.id === project.id ? '#15293A' : 'rgba(255, 255, 255, 0.03)',
                       border: selectedProject?.id === project.id ? '2px solid #29BD98' : '1px solid rgba(255, 255, 255, 0.1)',
                       borderRadius: '12px',
                       padding: '16px',
+                      position: 'relative',
                       cursor: 'pointer',
                       transition: 'all 0.2s ease'
                     }}
                   >
+                    {/* Delete button for all deletable projects */}
+                    {(() => {
+                      const canDelete = canDeleteProject(project.status);
+                      console.log('Project:', getProjectName(project), 'Status:', project.status, 'Can Delete:', canDelete);
+                      return canDelete;
+                    })() && (
+                      <motion.button
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.9 }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteProject(project.id, getProjectName(project));
+                        }}
+                        style={{
+                          position: 'absolute',
+                          top: '8px',
+                          right: '8px',
+                          background: '#E74C3C',
+                          border: '2px solid #C0392B',
+                          borderRadius: '8px',
+                          padding: '8px 12px',
+                          fontSize: '14px',
+                          color: '#FFFFFF',
+                          cursor: 'pointer',
+                          fontWeight: '700',
+                          zIndex: 1000,
+                          boxShadow: '0 2px 8px rgba(231, 76, 60, 0.4)'
+                        }}
+                      >
+                        🗑️ Delete
+                      </motion.button>
+                    )}
+                    
                     <div style={{
                       fontSize: '16px',
                       fontWeight: '600',
                       color: '#FFFFFF',
-                      marginBottom: '8px'
+                      marginBottom: '8px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px'
                     }}>
-                      {project.phases?.vision?.projectName || 'Untitled Project'}
+                      {getProjectName(project)}
+                      {project.status === 'draft' && (
+                        <span style={{
+                          fontSize: '11px',
+                          padding: '2px 8px',
+                          backgroundColor: 'rgba(255, 165, 0, 0.2)',
+                          border: '1px solid rgba(255, 165, 0, 0.4)',
+                          borderRadius: '6px',
+                          color: '#FFA500'
+                        }}>
+                          Click to continue
+                        </span>
+                      )}
                     </div>
                     <div style={{
                       display: 'flex',
@@ -306,7 +662,14 @@ const UserDashboard = () => {
                       fontSize: '12px',
                       color: 'rgba(255, 255, 255, 0.5)'
                     }}>
-                      {new Date(project.createdAt?.toDate?.() || project.createdAt).toLocaleDateString()}
+                      {(() => {
+                        try {
+                          const date = project.createdAt?.toDate?.() || new Date(project.createdAt);
+                          return isNaN(date.getTime()) ? 'Recently created' : date.toLocaleDateString();
+                        } catch {
+                          return 'Recently created';
+                        }
+                      })()}
                     </div>
                   </motion.div>
                 ))}
@@ -334,6 +697,62 @@ const UserDashboard = () => {
             {selectedProject && (
               <div>
                 
+                {/* Project Policy Info Banner */}
+                {(selectedProject.status === 'submitted' || selectedProject.status === 'payment-pending') && (
+                  <div style={{
+                    backgroundColor: 'rgba(41, 189, 152, 0.1)',
+                    border: '1px solid rgba(41, 189, 152, 0.3)',
+                    borderRadius: '12px',
+                    padding: '16px 20px',
+                    marginBottom: '16px',
+                    display: 'flex',
+                    alignItems: 'start',
+                    gap: '12px'
+                  }}>
+                    <span style={{ fontSize: '20px' }}>ℹ️</span>
+                    <div style={{ flex: 1 }}>
+                      <p style={{
+                        fontSize: '14px',
+                        color: 'rgba(255, 255, 255, 0.9)',
+                        margin: 0,
+                        lineHeight: '1.6'
+                      }}>
+                        {selectedProject.status === 'submitted' ? (
+                          <><strong>Under review.</strong> Our team will send you a payment link soon. You can delete this project now if needed. Once payment is confirmed, the project will be locked.</>
+                        ) : (
+                          <><strong>Payment link sent.</strong> You can still delete this project before making payment. Once payment is confirmed by our team, the project will be locked and cannot be cancelled.</>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                )}
+                
+                {(selectedProject.status === 'payment-confirmed' || selectedProject.status === 'in-progress' || selectedProject.status === 'review') && (
+                  <div style={{
+                    backgroundColor: 'rgba(231, 76, 60, 0.1)',
+                    border: '1px solid rgba(231, 76, 60, 0.3)',
+                    borderRadius: '12px',
+                    padding: '16px 20px',
+                    marginBottom: '16px',
+                    display: 'flex',
+                    alignItems: 'start',
+                    gap: '12px'
+                  }}>
+                    <span style={{ fontSize: '20px' }}>🔒</span>
+                    <div style={{ flex: 1 }}>
+                      <p style={{
+                        fontSize: '14px',
+                        color: 'rgba(255, 255, 255, 0.9)',
+                        margin: 0,
+                        lineHeight: '1.6'
+                      }}>
+                        <strong>Project is locked.</strong> Payment has been received and work is in progress. 
+                        This project cannot be cancelled or refunded. For urgent concerns, please chat with our team.
+                      </p>
+                    </div>
+                  </div>
+                )}
+                
                 {/* Project Header */}
                 <div style={{
                   backgroundColor: '#15293A',
@@ -357,13 +776,13 @@ const UserDashboard = () => {
                         color: '#FFFFFF',
                         marginBottom: '8px'
                       }}>
-                        {selectedProject.phases?.vision?.projectName || 'Untitled Project'}
+                        {getProjectName(selectedProject)}
                       </h2>
                       <p style={{
                         fontSize: '16px',
                         color: 'rgba(255, 255, 255, 0.7)'
                       }}>
-                        {selectedProject.phases?.vision?.description || 'No description'}
+                        {getProjectDescription(selectedProject)}
                       </p>
                     </div>
                     
@@ -426,49 +845,76 @@ const UserDashboard = () => {
                 {/* Action Buttons */}
                 <div style={{
                   display: 'grid',
-                  gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)',
+                  gridTemplateColumns: isMobile ? '1fr' : selectedProject.status === 'draft' ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)',
                   gap: '16px',
                   marginBottom: '24px'
                 }}>
-                  <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={handleChatWithExpert}
-                    style={{
-                      backgroundColor: '#29BD98',
-                      color: '#FFFFFF',
-                      border: 'none',
-                      borderRadius: '12px',
-                      padding: '16px',
-                      fontSize: '15px',
-                      fontWeight: '600',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '8px'
-                    }}
-                  >
-                    💬 Chat with Expert
-                  </motion.button>
+                  {selectedProject.status === 'draft' ? (
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => navigate(`/onboarding/phase${selectedProject.currentPhase || 1}`)}
+                      style={{
+                        backgroundColor: '#29BD98',
+                        color: '#FFFFFF',
+                        border: 'none',
+                        borderRadius: '12px',
+                        padding: '16px',
+                        fontSize: '15px',
+                        fontWeight: '600',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '8px'
+                      }}
+                    >
+                      ▶️ Continue Project
+                    </motion.button>
+                  ) : (
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={handleChatWithExpert}
+                      style={{
+                        backgroundColor: '#29BD98',
+                        color: '#FFFFFF',
+                        border: 'none',
+                        borderRadius: '12px',
+                        padding: '16px',
+                        fontSize: '15px',
+                        fontWeight: '600',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '8px'
+                      }}
+                    >
+                      💬 Chat with Expert
+                    </motion.button>
+                  )}
                   
-                  <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={handleEditRequest}
-                    style={{
-                      backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                      color: '#FFFFFF',
-                      border: '1px solid rgba(255, 255, 255, 0.2)',
-                      borderRadius: '12px',
-                      padding: '16px',
-                      fontSize: '15px',
-                      fontWeight: '600',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    ✏️ Request Changes
-                  </motion.button>
+                  {/* Delete button for projects before payment confirmation */}
+                  {canDeleteProject(selectedProject.status) && selectedProject.status !== 'draft' && (
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={handleDeleteSubmittedProject}
+                      style={{
+                        backgroundColor: 'rgba(231, 76, 60, 0.1)',
+                        color: '#E74C3C',
+                        border: '1px solid rgba(231, 76, 60, 0.3)',
+                        borderRadius: '12px',
+                        padding: '16px',
+                        fontSize: '15px',
+                        fontWeight: '600',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      🗑️ Delete Project
+                    </motion.button>
+                  )}
                   
                   <motion.button
                     whileHover={{ scale: 1.02 }}
@@ -699,6 +1145,7 @@ const UserDashboard = () => {
         )}
       </div>
     </div>
+    </>
   );
 };
 
