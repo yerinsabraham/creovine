@@ -133,20 +133,13 @@ const SolutionHub = () => {
 
     // Check if user is logged in
     if (!currentUser) {
+      alert('Please sign in to continue');
       setShowAuthModal(true);
       return;
     }
 
-    // Check for existing incomplete project
-    if (projectData?.primaryService && projectData.primaryService.id !== primaryService.id) {
-      // User has an existing project with different service
-      setExistingProject(projectData);
-      setShowContinueModal(true);
-      return;
-    }
-
-    // Proceed with new/same selection
-    await proceedWithSelection();
+    // User is signed in, navigate to onboarding
+    navigate(primaryService.route);
   };
 
   const proceedWithSelection = async () => {
