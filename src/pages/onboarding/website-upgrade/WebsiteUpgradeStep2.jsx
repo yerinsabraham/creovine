@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useProject } from '../../../context/ProjectContext';
@@ -48,7 +48,7 @@ const WebsiteUpgradeStep2 = () => {
   ];
 
   // Toggle assistance
-  React.useEffect(() => {
+  useEffect(() => {
     const itemId = 'website-upgrade-planning';
     const itemExists = items.some(item => item.id === itemId);
 
