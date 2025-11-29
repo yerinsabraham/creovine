@@ -7,6 +7,7 @@ import { useIsMobile } from '../../../hooks/useMediaQuery';
 import { useMultiServiceComplete, useIsMultiService } from '../../../hooks/useMultiService';
 import ChipGroup from '../../../components/common/ChipGroup';
 import AssistedToggle from '../../../components/common/AssistedToggle';
+import TimelineSelector from '../../../components/common/TimelineSelector';
 import CartSummary from '../../../components/common/CartSummary';
 
 const RefactorStep3 = () => {
@@ -19,7 +20,8 @@ const RefactorStep3 = () => {
   
   const themeColor = '#F59E0B';
   
-  const [timeline, setTimeline] = useState(projectData?.refactor?.timeline || '');
+  const [timeline, setTimeline] = useState(projectData?.refactor?.timeline || { amount: 7, unit: 'days' });
+  const [timelineMultiplier, setTimelineMultiplier] = useState(projectData?.refactor?.timelineMultiplier || 1.0);
   const [documentation, setDocumentation] = useState(projectData?.refactor?.documentation || '');
   const [testing, setTesting] = useState(projectData?.refactor?.testing || '');
   const [additionalNotes, setAdditionalNotes] = useState(projectData?.refactor?.additionalNotes || '');
@@ -54,7 +56,7 @@ const RefactorStep3 = () => {
 
   const handleSubmit = async () => {
     try {
-      const serviceData = { ...projectData?.refactor, timeline, documentation, testing, additionalNotes };
+      const serviceData = { ...projectData?.refactor, timeline, timelineMultiplier, documentation, testing, additionalNotes };
       await updateProjectData({ refactor: serviceData });
       
       if (isMultiService) {
@@ -67,7 +69,7 @@ const RefactorStep3 = () => {
     }
   };
 
-  const isValid = timeline && documentation && testing;
+  const isValid = timeline && timeline.amount > 0 && documentation && testing;
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#FAFAFA' }}>
@@ -85,7 +87,15 @@ const RefactorStep3 = () => {
             <p style={{ color: '#666', marginBottom: '32px' }}>Final details for your refactoring project</p>
             <div style={{ marginBottom: '32px' }}>
               <label style={{ display: 'block', fontSize: '16px', fontWeight: '500', color: '#333', marginBottom: '12px' }}>Timeline *</label>
-              <ChipGroup options={timelineOptions} selected={timeline} onChange={setTimeline} themeColor={themeColor} />
+              <TimelineSelector
+                value={timeline}
+                onChange={(timelineData) => {
+                  setTimeline(timelineData);
+                  setTimelineMultiplier(timelineData.priceMultiplier);
+                }}
+                serviceComplexity="medium"
+                showPriceImpact={true}
+              />
             </div>
             <div style={{ marginBottom: '32px' }}>
               <label style={{ display: 'block', fontSize: '16px', fontWeight: '500', color: '#333', marginBottom: '12px' }}>Documentation *</label>

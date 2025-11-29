@@ -9,6 +9,7 @@ import { useMultiServiceComplete, useIsMultiService } from '../../../hooks/useMu
 import AssistedToggle from '../../../components/common/AssistedToggle';
 import CartSummary from '../../../components/common/CartSummary';
 import ChipGroup from '../../../components/common/ChipGroup';
+import TimelineSelector from '../../../components/common/TimelineSelector';
 import logo from '../../../assets/logo.png';
 
 const DesignStep3 = () => {
@@ -29,7 +30,8 @@ const DesignStep3 = () => {
     designTool: projectData?.design?.designTool || '',
     includePrototype: projectData?.design?.includePrototype || false,
     includeDesignSystem: projectData?.design?.includeDesignSystem || false,
-    timeline: projectData?.design?.timeline || '',
+    timeline: projectData?.design?.timeline || { amount: 7, unit: 'days' },
+    timelineMultiplier: projectData?.design?.timelineMultiplier || 1.0,
     iterations: projectData?.design?.iterations || '',
     additionalNotes: projectData?.design?.additionalNotes || ''
   });
@@ -72,7 +74,7 @@ const DesignStep3 = () => {
 
   // Validation
   const isDeliverablesValid = formData.deliverables.length > 0;
-  const isTimelineValid = formData.timeline.trim();
+  const isTimelineValid = formData.timeline && formData.timeline.amount > 0;
   const isFormValid = isDeliverablesValid && isTimelineValid;
 
   const deliverableOptions = [
@@ -92,14 +94,6 @@ const DesignStep3 = () => {
     { id: 'sketch', label: 'Sketch' },
     { id: 'xd', label: 'Adobe XD' },
     { id: 'any', label: 'Any tool' }
-  ];
-
-  const timelineOptions = [
-    '3-5 days',
-    '1 week',
-    '2 weeks',
-    '3-4 weeks',
-    'Flexible'
   ];
 
   const iterationOptions = [
@@ -333,7 +327,7 @@ const DesignStep3 = () => {
             </div>
 
             {/* Timeline */}
-            <div style={{ marginBottom: '32px' }}>
+            <div style={{ marginBottom: '16px' }}>
               <label style={{
                 display: 'block',
                 fontSize: '16px',
@@ -343,31 +337,20 @@ const DesignStep3 = () => {
               }}>
                 When do you need this? *
               </label>
-              <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-                {timelineOptions.map(option => (
-                  <button
-                    key={option}
-                    onClick={() => handleInputChange('timeline', option)}
-                    style={{
-                      padding: '12px 24px',
-                      fontSize: '14px',
-                      fontWeight: '600',
-                      color: formData.timeline === option ? '#FFFFFF' : 'rgba(255, 255, 255, 0.7)',
-                      backgroundColor: formData.timeline === option 
-                        ? 'rgba(236, 72, 153, 0.2)' 
-                        : 'rgba(255, 255, 255, 0.05)',
-                      border: formData.timeline === option 
-                        ? '2px solid #EC4899' 
-                        : '2px solid rgba(255, 255, 255, 0.1)',
-                      borderRadius: '12px',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    {option}
-                  </button>
-                ))}
-              </div>
             </div>
+            <TimelineSelector
+              value={formData.timeline}
+              onChange={(timelineData) => {
+                setFormData(prev => ({
+                  ...prev,
+                  timeline: timelineData,
+                  timelineMultiplier: timelineData.priceMultiplier
+                }));
+              }}
+              serviceComplexity="medium"
+              showPriceImpact={true}
+              style={{ marginBottom: '32px' }}
+            />
 
             {/* Iterations */}
             <div style={{ marginBottom: '32px' }}>

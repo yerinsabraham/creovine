@@ -6,6 +6,7 @@ import { useCart } from '../../../context/CartContext';
 import { useMultiServiceComplete, useIsMultiService } from '../../../hooks/useMultiService';
 import ChipGroup from '../../../components/common/ChipGroup';
 import AssistedToggle from '../../../components/common/AssistedToggle';
+import TimelineSelector from '../../../components/common/TimelineSelector';
 import CartSummary from '../../../components/common/CartSummary';
 
 const BugfixStep2 = () => {
@@ -19,7 +20,8 @@ const BugfixStep2 = () => {
   const themeColor = '#EF4444';
   
   // Form state
-  const [timeline, setTimeline] = useState(projectData?.bugfix?.timeline || '');
+  const [timeline, setTimeline] = useState(projectData?.bugfix?.timeline || { amount: 3, unit: 'days' });
+  const [timelineMultiplier, setTimelineMultiplier] = useState(projectData?.bugfix?.timelineMultiplier || 1.0);
   const [techStack, setTechStack] = useState(projectData?.bugfix?.techStack || []);
   const [accessType, setAccessType] = useState(projectData?.bugfix?.accessType || '');
   const [additionalInfo, setAdditionalInfo] = useState(projectData?.bugfix?.additionalInfo || '');
@@ -94,7 +96,7 @@ const BugfixStep2 = () => {
 
   const handleSubmit = async () => {
     try {
-      const serviceData = { ...projectData?.bugfix, timeline, techStack, accessType, additionalInfo };
+      const serviceData = { ...projectData?.bugfix, timeline, timelineMultiplier, techStack, accessType, additionalInfo };
       await updateProjectData({ bugfix: serviceData });
       
       if (isMultiService) {
@@ -107,7 +109,7 @@ const BugfixStep2 = () => {
     }
   };
 
-  const isValid = timeline && accessType;
+  const isValid = timeline && timeline.amount > 0 && accessType;
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#FAFAFA' }}>
@@ -178,28 +180,15 @@ const BugfixStep2 = () => {
                   label="Priority support"
                 />
               </div>
-              <ChipGroup
-                options={timelineOptions}
-                selected={timeline}
-                onChange={setTimeline}
-                themeColor={themeColor}
+              <TimelineSelector
+                value={timeline}
+                onChange={(timelineData) => {
+                  setTimeline(timelineData);
+                  setTimelineMultiplier(timelineData.priceMultiplier);
+                }}
+                serviceComplexity="simple"
+                showPriceImpact={true}
               />
-              {timeline === 'emergency' && (
-                <motion.p 
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  style={{ 
-                    fontSize: '13px', 
-                    color: themeColor, 
-                    marginTop: '8px',
-                    padding: '8px 12px',
-                    backgroundColor: 'rgba(239, 68, 68, 0.1)',
-                    borderRadius: '8px'
-                  }}
-                >
-                  Emergency fixes may incur additional rush fees
-                </motion.p>
-              )}
             </div>
 
             {/* Tech Stack */}

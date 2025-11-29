@@ -5,8 +5,12 @@ import { useAuth } from '../../context/AuthContext';
 import { useProject } from '../../context/ProjectContext';
 import { useCart } from '../../context/CartContext';
 import { useIsMobile } from '../../hooks/useMediaQuery';
+import { useLocation } from '../../context/LocationContext';
 import AssistedToggle from '../../components/common/AssistedToggle';
 import CartSummary from '../../components/common/CartSummary';
+import TimelineSelector from '../../components/common/TimelineSelector';
+import ProjectEstimateModal from '../../components/common/ProjectEstimateModal';
+import { calculateProjectEstimate } from '../../utils/pricingCalculator';
 import logo from '../../assets/logo.png';
 
 const Phase6Page = () => {
@@ -14,17 +18,21 @@ const Phase6Page = () => {
   const { currentUser, logout } = useAuth();
   const { projectData, updatePhaseData, submitProject, goToPhase } = useProject();
   const { hasItem } = useCart();
+  const { location } = useLocation();
   const isMobile = useIsMobile();
 
   const [formData, setFormData] = useState({
     deploymentPlatform: projectData?.deployment?.deploymentPlatform || '',
     customDomain: projectData?.deployment?.customDomain || '',
     domainOwnership: projectData?.deployment?.domainOwnership || false,
-    launchTimeline: projectData?.deployment?.launchTimeline || '',
+    launchTimeline: projectData?.deployment?.launchTimeline || { amount: 7, unit: 'days' },
+    timelineMultiplier: projectData?.deployment?.timelineMultiplier || 1.0,
     supportNeeds: projectData?.deployment?.supportNeeds || ''
   });
 
   const [submitting, setSubmitting] = useState(false);
+  const [showEstimateModal, setShowEstimateModal] = useState(false);
+  const [estimate, setEstimate] = useState(null);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -42,12 +50,24 @@ const Phase6Page = () => {
   const handleSubmit = async () => {
     try {
       setSubmitting(true);
+      
+      // Save the final phase data
       await updatePhaseData('deployment', formData);
+      
+      // Calculate estimate
+      const countryCode = location?.country || 'US';
+      const timelineMultiplier = formData.timelineMultiplier || 1.0;
+      const calculatedEstimate = calculateProjectEstimate(projectData, countryCode, timelineMultiplier);
+      setEstimate(calculatedEstimate);
+      
+      // Submit project to Firestore
       await submitProject();
-      navigate('/success');
+      
+      // Show the estimate modal
+      setShowEstimateModal(true);
     } catch (error) {
       console.error('Submission error:', error);
-      alert('Error submitting project. Please try again.');
+      alert('Error submitting project. Please try again. Error: ' + error.message);
     } finally {
       setSubmitting(false);
     }
@@ -66,10 +86,11 @@ const Phase6Page = () => {
     }
   };
 
-  // Validation: field is valid if filled OR user has assisted option in cart
-  const isPlatformValid = formData.deploymentPlatform.trim() || hasItem('platform-assistance');
+  // Validation: deployment platform and timeline must be selected
+  const isPlatformValid = formData.deploymentPlatform.trim();
+  const isTimelineValid = formData.launchTimeline && formData.launchTimeline.amount > 0;
   
-  const isFormValid = isPlatformValid;
+  const isFormValid = isPlatformValid && isTimelineValid;
 
   const platformOptions = [
     { 
@@ -228,26 +249,16 @@ const Phase6Page = () => {
             border: '1px solid rgba(255, 255, 255, 0.1)'
           }}>
             {/* Deployment Platform */}
-            <AssistedToggle
-              id="platform-assistance"
-              category="Technical"
-              label="Not sure which platform to choose?"
-              price={20}
-              assistedLabel="Choose platform for me"
-              tooltipText="We'll recommend the best hosting platform based on your app's requirements, traffic expectations, and budget."
-            />
-
-            {!hasItem('platform-assistance') && (
-              <div style={{ marginBottom: '32px', marginTop: '24px' }}>
-                <label style={{
-                  display: 'block',
-                  fontSize: '16px',
-                  fontWeight: '700',
-                  color: '#FFFFFF',
-                  marginBottom: '16px'
-                }}>
-                  Where would you like to deploy? *
-                </label>
+            <div style={{ marginBottom: '32px' }}>
+              <label style={{
+                display: 'block',
+                fontSize: '16px',
+                fontWeight: '700',
+                color: '#FFFFFF',
+                marginBottom: '16px'
+              }}>
+                Where would you like to deploy? *
+              </label>
                 
                 <div style={{
                   display: 'grid',
@@ -285,8 +296,7 @@ const Phase6Page = () => {
                     </motion.button>
                   ))}
                 </div>
-              </div>
-            )}
+            </div>
 
             {/* Custom Domain */}
             <div style={{ marginBottom: '32px', marginTop: '32px' }}>
@@ -357,33 +367,19 @@ const Phase6Page = () => {
                 fontSize: '16px',
                 fontWeight: '700',
                 color: '#FFFFFF',
-                marginBottom: '12px'
+                marginBottom: '16px'
               }}>
-                What's your preferred launch timeline? (Optional)
+                When do you need your app launched? *
               </label>
-              <select
+              <TimelineSelector
                 value={formData.launchTimeline}
-                onChange={(e) => handleInputChange('launchTimeline', e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '16px 20px',
-                  fontSize: '16px',
-                  color: formData.launchTimeline ? '#FFFFFF' : 'rgba(255, 255, 255, 0.5)',
-                  backgroundColor: '#15293A',
-                  border: '2px solid rgba(255, 255, 255, 0.1)',
-                  borderRadius: '16px',
-                  outline: 'none',
-                  cursor: 'pointer',
-                  fontFamily: 'inherit'
+                onChange={(timelineData) => {
+                  handleInputChange('launchTimeline', timelineData);
+                  handleInputChange('timelineMultiplier', timelineData.priceMultiplier);
                 }}
-              >
-                <option value="" disabled>Select timeline...</option>
-                {timelineOptions.map(option => (
-                  <option key={option} value={option} style={{ color: '#000' }}>
-                    {option}
-                  </option>
-                ))}
-              </select>
+                serviceComplexity="complex"
+                showPriceImpact={true}
+              />
             </div>
 
             {/* Support Needs */}
@@ -517,6 +513,14 @@ const Phase6Page = () => {
       </div>
 
       <CartSummary />
+
+      {/* Estimate Modal */}
+      <ProjectEstimateModal
+        isOpen={showEstimateModal}
+        estimate={estimate}
+        onClose={() => setShowEstimateModal(false)}
+        serviceName="Full-Stack App"
+      />
     </div>
   );
 };

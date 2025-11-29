@@ -56,7 +56,7 @@ const BackendStep1 = () => {
 
   // Validation
   const isTypeValid = formData.projectType.trim();
-  const isStackValid = formData.techStack.trim() || hasItem('stack-assist');
+  const isStackValid = formData.techStack.trim();
   const isDescriptionValid = formData.description.trim() || hasItem('backend-scope-assist');
   
   const isFormValid = isTypeValid && isStackValid && isDescriptionValid;
@@ -258,26 +258,16 @@ const BackendStep1 = () => {
             </div>
 
             {/* Tech Stack */}
-            <AssistedToggle
-              id="stack-assist"
-              category="Backend"
-              label="Need help choosing the right tech stack?"
-              price={25}
-              assistedLabel="Recommend for me"
-              tooltipText="We'll analyze your requirements and recommend the best backend technology for your project."
-            />
-
-            {!hasItem('stack-assist') && (
-              <div style={{ marginBottom: '32px', marginTop: '24px' }}>
-                <label style={{
-                  display: 'block',
-                  fontSize: '16px',
-                  fontWeight: '700',
-                  color: '#FFFFFF',
-                  marginBottom: '12px'
-                }}>
-                  What tech stack do you prefer? *
-                </label>
+            <div style={{ marginBottom: '32px' }}>
+              <label style={{
+                display: 'block',
+                fontSize: '16px',
+                fontWeight: '700',
+                color: '#FFFFFF',
+                marginBottom: '12px'
+              }}>
+                What tech stack do you prefer? *
+              </label>
                 <select
                   value={formData.techStack}
                   onChange={(e) => handleInputChange('techStack', e.target.value)}
@@ -301,8 +291,7 @@ const BackendStep1 = () => {
                     </option>
                   ))}
                 </select>
-              </div>
-            )}
+            </div>
 
             {/* Architecture Style */}
             <div style={{ marginBottom: '32px' }}>

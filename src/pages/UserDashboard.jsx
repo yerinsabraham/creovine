@@ -33,8 +33,17 @@ const UserDashboard = () => {
       const querySnapshot = await getDocs(q);
       const userProjects = [];
       querySnapshot.forEach((doc) => {
-        userProjects.push({ id: doc.id, ...doc.data() });
+        const data = doc.data();
+        userProjects.push({ id: doc.id, ...data });
       });
+      
+      // Sort by newest first (submitted or created date)
+      userProjects.sort((a, b) => {
+        const dateA = a.submittedAt?.toDate?.() || a.createdAt?.toDate?.() || new Date(a.createdAt || 0);
+        const dateB = b.submittedAt?.toDate?.() || b.createdAt?.toDate?.() || new Date(b.createdAt || 0);
+        return dateB - dateA;
+      });
+      
       setProjects(userProjects);
       if (userProjects.length > 0 && !selectedProject) {
         setSelectedProject(userProjects[0]);
@@ -76,14 +85,10 @@ const UserDashboard = () => {
   };
 
   const handleChatWithExpert = () => {
-    if (!selectedProject) return;
-    
-    // Navigate to expert chat with project context
-    const primaryService = selectedProject.phases?.primaryService;
-    navigate(`/expert-consultation`, {
+    // Navigate to experts page where user can select expert to chat with
+    navigate('/experts', {
       state: {
-        projectId: selectedProject.id,
-        primaryService
+        projectId: selectedProject?.id
       }
     });
   };
@@ -165,40 +170,13 @@ const UserDashboard = () => {
         padding: isMobile ? '24px 20px' : '40px'
       }}>
         
-        {/* Start New Project Banner - Always visible at top */}
+        {/* Start New Project Button - Small at top */}
         {projects.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            style={{
-              backgroundColor: 'linear-gradient(135deg, rgba(41, 189, 152, 0.1) 0%, rgba(36, 151, 249, 0.1) 100%)',
-              border: '2px solid rgba(41, 189, 152, 0.3)',
-              borderRadius: '16px',
-              padding: isMobile ? '20px' : '24px',
-              marginBottom: '32px',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              flexWrap: 'wrap',
-              gap: '16px'
-            }}
-          >
-            <div>
-              <h3 style={{
-                fontSize: isMobile ? '18px' : '20px',
-                fontWeight: '700',
-                color: '#FFFFFF',
-                marginBottom: '4px'
-              }}>
-                🚀 Ready to build something new?
-              </h3>
-              <p style={{
-                fontSize: '14px',
-                color: 'rgba(255, 255, 255, 0.7)'
-              }}>
-                Start a new project and we'll build it in days
-              </p>
-            </div>
+          <div style={{
+            display: 'flex',
+            justifyContent: 'flex-end',
+            marginBottom: '24px'
+          }}>
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
@@ -207,18 +185,17 @@ const UserDashboard = () => {
                 backgroundColor: '#29BD98',
                 color: '#FFFFFF',
                 border: 'none',
-                borderRadius: '50px',
-                padding: isMobile ? '14px 28px' : '16px 32px',
-                fontSize: isMobile ? '15px' : '16px',
+                borderRadius: '12px',
+                padding: '12px 24px',
+                fontSize: '15px',
                 fontWeight: '600',
                 cursor: 'pointer',
-                boxShadow: '0 4px 16px rgba(41, 189, 152, 0.3)',
-                whiteSpace: 'nowrap'
+                boxShadow: '0 4px 16px rgba(41, 189, 152, 0.3)'
               }}
             >
               + Start New Project
             </motion.button>
-          </motion.div>
+          </div>
         )}
         
         {projects.length === 0 ? (
@@ -519,7 +496,7 @@ const UserDashboard = () => {
                   gap: '24px'
                 }}>
                   
-                  {/* Services */}
+                  {/* Project Type */}
                   <div style={{
                     backgroundColor: '#15293A',
                     borderRadius: '16px',
@@ -534,50 +511,21 @@ const UserDashboard = () => {
                       textTransform: 'uppercase',
                       letterSpacing: '1px'
                     }}>
-                      Services
+                      Project Type
                     </h3>
                     
-                    {selectedProject.phases?.primaryService && (
-                      <div style={{ marginBottom: '12px' }}>
-                        <div style={{
-                          display: 'inline-block',
-                          backgroundColor: 'rgba(41, 189, 152, 0.1)',
-                          border: '1px solid rgba(41, 189, 152, 0.3)',
-                          borderRadius: '8px',
-                          padding: '8px 16px',
-                          fontSize: '14px',
-                          color: '#29BD98',
-                          fontWeight: '600'
-                        }}>
-                          {selectedProject.phases.primaryService.name}
-                        </div>
-                      </div>
-                    )}
-                    
-                    {selectedProject.phases?.addOns?.length > 0 && (
-                      <div style={{
-                        display: 'flex',
-                        flexWrap: 'wrap',
-                        gap: '8px',
-                        marginTop: '12px'
-                      }}>
-                        {selectedProject.phases.addOns.map((addon, idx) => (
-                          <div
-                            key={idx}
-                            style={{
-                              backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                              border: '1px solid rgba(255, 255, 255, 0.2)',
-                              borderRadius: '8px',
-                              padding: '6px 12px',
-                              fontSize: '13px',
-                              color: 'rgba(255, 255, 255, 0.8)'
-                            }}
-                          >
-                            {addon.name}
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                    <div style={{
+                      display: 'inline-block',
+                      backgroundColor: 'rgba(41, 189, 152, 0.1)',
+                      border: '1px solid rgba(41, 189, 152, 0.3)',
+                      borderRadius: '8px',
+                      padding: '12px 20px',
+                      fontSize: '16px',
+                      color: '#29BD98',
+                      fontWeight: '600'
+                    }}>
+                      {selectedProject.phases?.vision ? 'Full-Stack Application' : 'Custom Project'}
+                    </div>
                   </div>
 
                   {/* Billing */}

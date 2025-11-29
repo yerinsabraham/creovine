@@ -20,8 +20,6 @@ const DeploymentStep1 = () => {
   const [projectType, setProjectType] = useState(projectData?.deployment?.projectType || '');
   const [currentState, setCurrentState] = useState(projectData?.deployment?.currentState || '');
   const [repoUrl, setRepoUrl] = useState(projectData?.deployment?.repoUrl || '');
-  
-  const [platformAssist, setPlatformAssist] = useState(items.some(item => item.id === 'deployment-platform-assist'));
 
   const platformOptions = [
     { id: 'vercel', label: 'Vercel' },
@@ -54,12 +52,6 @@ const DeploymentStep1 = () => {
     { id: 'fix', label: 'Fix Deployment Issues' }
   ];
 
-  useEffect(() => {
-    if (platformAssist) {
-      addItem({ id: 'deployment-platform-assist', name: 'Platform Selection Consultation', description: 'Expert help choosing the right deployment platform', price: 30, category: 'Deployment Help' });
-    } else { removeItem('deployment-platform-assist'); }
-  }, [platformAssist]);
-
   const handleContinue = () => {
     updateProjectData({ deployment: { ...projectData?.deployment, platform, projectType, currentState, repoUrl } });
     navigate('/onboarding/deployment/step2');
@@ -82,10 +74,7 @@ const DeploymentStep1 = () => {
             <h1 style={{ fontSize: isMobile ? '24px' : '28px', fontWeight: '600', marginBottom: '8px', color: '#111' }}>Deployment Platform</h1>
             <p style={{ color: '#666', marginBottom: '32px' }}>Where do you want to deploy your project?</p>
             <div style={{ marginBottom: '32px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                <label style={{ fontSize: '16px', fontWeight: '500', color: '#333' }}>Deployment platform *</label>
-                <AssistedToggle enabled={platformAssist} onToggle={setPlatformAssist} price={30} label="Help me choose" />
-              </div>
+              <label style={{ fontSize: '16px', fontWeight: '500', color: '#333', marginBottom: '12px', display: 'block' }}>Deployment platform *</label>
               <ChipGroup options={platformOptions} selected={platform} onChange={setPlatform} themeColor={themeColor} />
             </div>
             <div style={{ marginBottom: '32px' }}>

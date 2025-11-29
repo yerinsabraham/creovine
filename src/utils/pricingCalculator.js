@@ -200,6 +200,67 @@ const calculatePaymentComplexity = (data) => {
 };
 
 /**
+ * Calculate Full-Stack App complexity from Phase 1-6 data
+ */
+const calculateFullStackComplexity = (projectData) => {
+  let multiplier = 1.0;
+  
+  // Phase 1: Vision - Key features count
+  const keyFeatures = projectData?.vision?.keyFeatures || [];
+  if (keyFeatures.length > 5) multiplier += 0.2;
+  if (keyFeatures.length > 10) multiplier += 0.3;
+  
+  // Phase 2: Target Users - Multiple user types increase complexity
+  const userTypes = projectData?.users?.userTypes || [];
+  if (userTypes.length > 1) multiplier += 0.15;
+  if (userTypes.length > 3) multiplier += 0.25;
+  
+  // Phase 3: Features & Functionality
+  const authentication = projectData?.functionality?.authentication || [];
+  const coreFeatures = projectData?.functionality?.coreFeatures || [];
+  const additionalFeatures = projectData?.functionality?.additionalFeatures || [];
+  
+  // Multiple auth methods = more complexity
+  if (authentication.length > 1) multiplier += 0.2;
+  if (authentication.length > 3) multiplier += 0.3;
+  
+  // Feature count
+  const totalFeatures = coreFeatures.length + additionalFeatures.length;
+  if (totalFeatures > 5) multiplier += 0.3;
+  if (totalFeatures > 10) multiplier += 0.5;
+  
+  // Phase 4: Backend & Data
+  const databaseNeeds = projectData?.backend?.databaseNeeds || [];
+  const integrations = projectData?.backend?.integrations || [];
+  const fileStorage = projectData?.backend?.fileStorage || [];
+  const realtimeFeatures = projectData?.backend?.realtimeFeatures || [];
+  
+  // Database complexity
+  if (databaseNeeds.length > 2) multiplier += 0.2;
+  if (databaseNeeds.length > 4) multiplier += 0.3;
+  
+  // Each integration adds complexity
+  multiplier += integrations.length * 0.15;
+  
+  // File storage
+  if (fileStorage.length > 0) multiplier += 0.2;
+  
+  // Real-time features
+  if (realtimeFeatures.length > 0) multiplier += 0.3;
+  if (realtimeFeatures.length > 2) multiplier += 0.4;
+  
+  // Phase 5: Design - Custom design increases cost
+  if (projectData?.identity?.logoFile || projectData?.identity?.logoURL) {
+    multiplier += 0.15;
+  }
+  if (projectData?.identity?.designStyle) {
+    multiplier += 0.1;
+  }
+  
+  return Math.min(multiplier, 2.5); // Cap at 2.5x
+};
+
+/**
  * Calculate total project estimate
  * @param {Object} projectData - Full project data from Firestore
  * @param {string} countryCode - Country code for currency conversion
@@ -207,10 +268,56 @@ const calculatePaymentComplexity = (data) => {
  * @returns {Object} - { total, breakdown, requiresConsultation, discount }
  */
 export const calculateProjectEstimate = (projectData, countryCode = 'US', timelineMultiplier = 1.0) => {
-  const phases = projectData?.phases || {};
+  const phases = projectData?.phases || projectData;
   const primaryService = phases.primaryService;
   const addOns = phases.addOns || [];
   
+  // Check if this is a Phase 1-6 full-stack app (has vision, users, etc.)
+  const isFullStackApp = phases.vision || phases.users || phases.functionality;
+  
+  if (isFullStackApp) {
+    // Calculate Full-Stack App pricing based on Phase 1-6 data
+    const basePrice = 5000; // Base price for full-stack app
+    const complexity = calculateFullStackComplexity(phases);
+    const price = Math.round(basePrice * complexity);
+    
+    const breakdown = [{
+      serviceId: 'fullstack',
+      serviceName: 'Full-Stack Application',
+      basePrice,
+      complexity,
+      complexityLabel: getComplexityLabel(complexity),
+      price,
+      requiresConsultation: false
+    }];
+    
+    // Apply timeline multiplier
+    const totalUSD = Math.round(price * timelineMultiplier);
+    
+    // Convert to local currency
+    const localizedTotal = getLocalizedPrice(totalUSD, countryCode);
+    const localizedBreakdown = breakdown.map(item => ({
+      ...item,
+      localPrice: getLocalizedPrice(item.price, countryCode).amount,
+      localBasePrice: getLocalizedPrice(item.basePrice, countryCode).amount,
+    }));
+    
+    return {
+      total: localizedTotal.amount,
+      subtotal: getLocalizedPrice(price, countryCode).amount,
+      breakdown: localizedBreakdown,
+      requiresConsultation: false,
+      discount: 0,
+      serviceCount: 1,
+      currency: localizedTotal.currency,
+      currencySymbol: localizedTotal.symbol,
+      formatted: localizedTotal.formatted,
+      timelineMultiplier: timelineMultiplier,
+      baseTotal: localizedTotal.amount / timelineMultiplier
+    };
+  }
+  
+  // Original logic for multi-service selection
   if (!primaryService) {
     return {
       total: 0,

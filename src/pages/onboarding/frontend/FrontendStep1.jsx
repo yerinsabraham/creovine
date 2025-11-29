@@ -54,7 +54,7 @@ const FrontendStep1 = () => {
 
   // Validation
   const isTypeValid = formData.projectType.trim();
-  const isFrameworkValid = formData.framework.trim() || hasItem('framework-assist');
+  const isFrameworkValid = formData.framework.trim();
   const isDescriptionValid = formData.description.trim() || hasItem('project-scope-assist');
   
   const isFormValid = isTypeValid && isFrameworkValid && isDescriptionValid;
@@ -262,26 +262,16 @@ const FrontendStep1 = () => {
             </div>
 
             {/* Framework Selection */}
-            <AssistedToggle
-              id="framework-assist"
-              category="Frontend"
-              label="Need help choosing the right framework?"
-              price={20}
-              assistedLabel="Recommend for me"
-              tooltipText="We'll analyze your requirements and recommend the best frontend framework for your project."
-            />
-
-            {!hasItem('framework-assist') && (
-              <div style={{ marginBottom: '32px', marginTop: '24px' }}>
-                <label style={{
-                  display: 'block',
-                  fontSize: '16px',
-                  fontWeight: '700',
-                  color: '#FFFFFF',
-                  marginBottom: '12px'
-                }}>
-                  What framework/library do you prefer? *
-                </label>
+            <div style={{ marginBottom: '32px' }}>
+              <label style={{
+                display: 'block',
+                fontSize: '16px',
+                fontWeight: '700',
+                color: '#FFFFFF',
+                marginBottom: '12px'
+              }}>
+                What framework/library do you prefer? *
+              </label>
                 <select
                   value={formData.framework}
                   onChange={(e) => handleInputChange('framework', e.target.value)}
@@ -305,8 +295,7 @@ const FrontendStep1 = () => {
                     </option>
                   ))}
                 </select>
-              </div>
-            )}
+            </div>
 
             {/* Current State (for existing projects) */}
             {formData.projectType === 'Existing project' && (

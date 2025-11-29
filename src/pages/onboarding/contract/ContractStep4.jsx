@@ -7,6 +7,7 @@ import { useMultiServiceComplete, useIsMultiService } from '../../../hooks/useMu
 import ChipGroup from '../../../components/common/ChipGroup';
 import AssistedToggle from '../../../components/common/AssistedToggle';
 import CartSummary from '../../../components/common/CartSummary';
+import TimelineSelector from '../../../components/common/TimelineSelector';
 
 const ContractStep4 = () => {
   const navigate = useNavigate();
@@ -23,7 +24,8 @@ const ContractStep4 = () => {
   const [auditRequired, setAuditRequired] = useState(projectData?.contract?.auditRequired || '');
   const [deployment, setDeployment] = useState(projectData?.contract?.deployment || []);
   const [documentation, setDocumentation] = useState(projectData?.contract?.documentation || []);
-  const [timeline, setTimeline] = useState(projectData?.contract?.timeline || '');
+  const [timeline, setTimeline] = useState(projectData?.contract?.timeline || { amount: 7, unit: 'days' });
+  const [timelineMultiplier, setTimelineMultiplier] = useState(projectData?.contract?.timelineMultiplier || 1.0);
   const [additionalNotes, setAdditionalNotes] = useState(projectData?.contract?.additionalNotes || '');
   
   // Assisted toggles
@@ -66,13 +68,6 @@ const ContractStep4 = () => {
     { id: 'architecture', label: 'Architecture Diagrams' }
   ];
 
-  const timelineOptions = [
-    { id: 'urgent', label: '1-2 weeks' },
-    { id: 'standard', label: '3-4 weeks' },
-    { id: 'relaxed', label: '1-2 months' },
-    { id: 'flexible', label: 'Flexible' }
-  ];
-
   useEffect(() => {
     if (auditAssist) {
       addItem({
@@ -103,7 +98,7 @@ const ContractStep4 = () => {
 
   const handleSubmit = async () => {
     try {
-      const serviceData = { ...projectData?.contract, testingLevel, auditRequired, deployment, documentation, timeline, additionalNotes };
+      const serviceData = { ...projectData?.contract, testingLevel, auditRequired, deployment, documentation, timeline, timelineMultiplier, additionalNotes };
       await updateProjectData({ contract: serviceData });
       
       if (isMultiService) {
@@ -116,7 +111,7 @@ const ContractStep4 = () => {
     }
   };
 
-  const isValid = testingLevel && timeline;
+  const isValid = testingLevel && timeline && timeline.amount > 0;
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#FAFAFA' }}>
@@ -245,17 +240,21 @@ const ContractStep4 = () => {
             </div>
 
             {/* Timeline */}
-            <div style={{ marginBottom: '32px' }}>
+            <div style={{ marginBottom: '16px' }}>
               <label style={{ display: 'block', fontSize: '16px', fontWeight: '500', color: '#333', marginBottom: '12px' }}>
                 Timeline *
               </label>
-              <ChipGroup
-                options={timelineOptions}
-                selected={timeline}
-                onChange={setTimeline}
-                themeColor={themeColor}
-              />
             </div>
+            <TimelineSelector
+              value={timeline}
+              onChange={(timelineData) => {
+                setTimeline(timelineData);
+                setTimelineMultiplier(timelineData.priceMultiplier);
+              }}
+              serviceComplexity="medium"
+              showPriceImpact={true}
+              style={{ marginBottom: '32px' }}
+            />
 
             {/* Additional Notes */}
             <div style={{ marginBottom: '32px' }}>

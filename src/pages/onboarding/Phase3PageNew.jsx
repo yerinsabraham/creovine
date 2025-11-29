@@ -38,8 +38,16 @@ const Phase3Page = () => {
   };
 
   const handleContinue = async () => {
-    await updatePhaseData('functionality', formData);
-    navigate('/onboarding/phase4');
+    try {
+      console.log('Phase 3: Saving data and navigating...', formData);
+      await updatePhaseData('functionality', formData);
+      console.log('Phase 3: Data saved, navigating to Phase 4');
+      navigate('/onboarding/phase4');
+    } catch (error) {
+      console.error('Phase 3: Error saving data:', error);
+      // Navigate anyway to not block user
+      navigate('/onboarding/phase4');
+    }
   };
 
   const handleBack = () => {
@@ -55,8 +63,8 @@ const Phase3Page = () => {
     }
   };
 
-  // Validation: field is valid if filled OR user has assisted option in cart
-  const isAuthValid = formData.authentication.length > 0 || hasItem('authentication-assistance') || hasItem('feature-architecture-assistance');
+  // Validation: at least one auth method and one core feature selected (or assisted)
+  const isAuthValid = formData.authentication.length > 0;
   const areFeaturesValid = formData.coreFeatures.length > 0 || hasItem('feature-architecture-assistance');
   
   const isFormValid = isAuthValid && areFeaturesValid;
@@ -217,26 +225,16 @@ const Phase3Page = () => {
             border: '1px solid rgba(255, 255, 255, 0.1)'
           }}>
             {/* Authentication Methods */}
-            <AssistedToggle
-              id="authentication-assistance"
-              category="Technical"
-              label="Need help choosing authentication methods?"
-              price={20}
-              assistedLabel="Choose best auth for me"
-              tooltipText="We'll recommend the right authentication setup based on your app type, security needs, and target audience."
-            />
-
-            {!hasItem('authentication-assistance') && (
-              <div style={{ marginBottom: '32px', marginTop: '24px' }}>
-                <label style={{
-                  display: 'block',
-                  fontSize: '16px',
-                  fontWeight: '700',
-                  color: '#FFFFFF',
-                  marginBottom: '16px'
-                }}>
-                  How will users sign in? * (Select all that apply)
-                </label>
+            <div style={{ marginBottom: '32px' }}>
+              <label style={{
+                display: 'block',
+                fontSize: '16px',
+                fontWeight: '700',
+                color: '#FFFFFF',
+                marginBottom: '16px'
+              }}>
+                How will users sign in? * (Select all that apply)
+              </label>
                 
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
                   {authOptions.map(option => (
@@ -269,8 +267,7 @@ const Phase3Page = () => {
                     </motion.button>
                   ))}
                 </div>
-              </div>
-            )}
+            </div>
 
             {/* User Account Features */}
             <div style={{ marginBottom: '32px', marginTop: '32px' }}>

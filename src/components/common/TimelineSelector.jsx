@@ -22,21 +22,21 @@ const TimelineSelector = ({
   // Dynamic range configuration based on service complexity
   const rangeConfig = {
     simple: {
-      hours: { min: 6, max: 48, step: 6, default: 24 },
+      hours: { min: 1, max: 48, step: 1, default: 24 },
       days: { min: 1, max: 7, step: 1, default: 3 },
       weeks: { min: 1, max: 4, step: 1, default: 2 },
       months: { min: 1, max: 3, step: 1, default: 1 }
     },
     medium: {
-      hours: { min: 24, max: 72, step: 12, default: 48 },
-      days: { min: 3, max: 14, step: 1, default: 7 },
+      hours: { min: 1, max: 72, step: 1, default: 48 },
+      days: { min: 1, max: 14, step: 1, default: 7 },
       weeks: { min: 1, max: 8, step: 1, default: 4 },
       months: { min: 1, max: 6, step: 1, default: 2 }
     },
     complex: {
       hours: { min: 0, max: 0, step: 0, default: 0 }, // Disabled for complex
-      days: { min: 7, max: 30, step: 1, default: 14 },
-      weeks: { min: 2, max: 12, step: 1, default: 6 },
+      days: { min: 1, max: 30, step: 1, default: 14 },
+      weeks: { min: 1, max: 12, step: 1, default: 6 },
       months: { min: 1, max: 12, step: 1, default: 3 }
     }
   };
@@ -66,22 +66,20 @@ const TimelineSelector = ({
 
     // Define thresholds based on service complexity
     const thresholds = {
-      simple: { rush: 2, fast: 5, standard: 10, flexible: 20 },
-      medium: { rush: 5, fast: 10, standard: 21, flexible: 45 },
-      complex: { rush: 10, fast: 21, standard: 45, flexible: 90 }
+      simple: { rush: 2, fast: 5, standard: 999 },
+      medium: { rush: 5, fast: 10, standard: 999 },
+      complex: { rush: 10, fast: 21, standard: 999 }
     };
 
     const t = thresholds[serviceComplexity];
 
-    // Calculate multiplier
+    // Calculate multiplier (no discounts, only rush fees)
     if (totalDays <= t.rush) {
       return { multiplier: 1.5, label: 'RUSH', emoji: '⚡', color: '#FF6B6B', discount: false };
     } else if (totalDays <= t.fast) {
       return { multiplier: 1.2, label: 'FAST', emoji: '🚀', color: '#FFA500', discount: false };
-    } else if (totalDays <= t.standard) {
-      return { multiplier: 1.0, label: 'STANDARD', emoji: '⏱️', color: '#29BD98', discount: false };
     } else {
-      return { multiplier: 0.9, label: 'FLEXIBLE', emoji: '📅', color: '#6B8CFF', discount: true };
+      return { multiplier: 1.0, label: 'STANDARD', emoji: '⏱️', color: '#29BD98', discount: false };
     }
   };
 
@@ -131,9 +129,7 @@ const TimelineSelector = ({
 
   // Get percentage change text
   const getPriceChangeText = () => {
-    if (priceImpact.discount) {
-      return `-${Math.round((1 - priceImpact.multiplier) * 100)}% discount`;
-    } else if (priceImpact.multiplier > 1) {
+    if (priceImpact.multiplier > 1) {
       return `+${Math.round((priceImpact.multiplier - 1) * 100)}% rush fee`;
     }
     return 'Standard pricing';
@@ -164,18 +160,32 @@ const TimelineSelector = ({
           {['hours', 'days', 'weeks', 'months'].map((unit) => {
             const isDisabled = serviceComplexity === 'complex' && unit === 'hours';
             return (
-              <Chip
+              <motion.button
                 key={unit}
-                active={selectedUnit === unit && !isDisabled}
+                whileHover={{ scale: !isDisabled ? 1.05 : 1 }}
+                whileTap={{ scale: !isDisabled ? 0.95 : 1 }}
                 onClick={() => !isDisabled && handleUnitChange(unit)}
+                disabled={isDisabled}
                 style={{
-                  opacity: isDisabled ? 0.3 : 1,
+                  padding: '12px 24px',
+                  fontSize: '15px',
+                  fontWeight: '600',
+                  color: selectedUnit === unit && !isDisabled ? '#FFFFFF' : 'rgba(255, 255, 255, 0.7)',
+                  background: selectedUnit === unit && !isDisabled
+                    ? 'linear-gradient(135deg, #29BD98 0%, #2497F9 100%)'
+                    : 'rgba(255, 255, 255, 0.05)',
+                  border: selectedUnit === unit && !isDisabled
+                    ? '2px solid transparent'
+                    : '2px solid rgba(255, 255, 255, 0.2)',
+                  borderRadius: '12px',
                   cursor: isDisabled ? 'not-allowed' : 'pointer',
-                  textTransform: 'capitalize'
+                  opacity: isDisabled ? 0.3 : 1,
+                  textTransform: 'capitalize',
+                  transition: 'all 0.2s ease'
                 }}
               >
-                {unit}
-              </Chip>
+                {unit.charAt(0).toUpperCase() + unit.slice(1)}
+              </motion.button>
             );
           })}
         </div>
@@ -324,40 +334,6 @@ const TimelineSelector = ({
           <span>{currentRange.min} {selectedUnit}</span>
           <span>{currentRange.max} {selectedUnit}</span>
         </div>
-
-        {/* Disclaimer */}
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          style={{
-            padding: '16px',
-            backgroundColor: 'rgba(255, 165, 0, 0.1)',
-            border: '1px solid rgba(255, 165, 0, 0.3)',
-            borderRadius: '12px',
-            display: 'flex',
-            gap: '12px',
-            alignItems: 'flex-start'
-          }}
-        >
-          <span style={{ fontSize: '20px', flexShrink: 0 }}>⚠️</span>
-          <div>
-            <div style={{
-              fontSize: '14px',
-              fontWeight: '600',
-              color: '#FFA500',
-              marginBottom: '4px'
-            }}>
-              Timeline Subject to Review
-            </div>
-            <div style={{
-              fontSize: '13px',
-              color: 'rgba(255, 255, 255, 0.7)',
-              lineHeight: '1.5'
-            }}>
-              Final delivery timeline will be confirmed after project analysis. We'll work with you to ensure realistic deadlines.
-            </div>
-          </div>
-        </motion.div>
       </div>
     </div>
   );

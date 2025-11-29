@@ -38,8 +38,16 @@ const Phase4Page = () => {
   };
 
   const handleContinue = async () => {
-    await updatePhaseData('backend', formData);
-    navigate('/onboarding/phase5');
+    try {
+      console.log('Phase 4: Saving data and navigating...', formData);
+      await updatePhaseData('backend', formData);
+      console.log('Phase 4: Data saved, navigating to Phase 5');
+      navigate('/onboarding/phase5');
+    } catch (error) {
+      console.error('Phase 4: Error saving data:', error);
+      // Navigate anyway to not block user
+      navigate('/onboarding/phase5');
+    }
   };
 
   const handleBack = () => {
@@ -271,26 +279,16 @@ const Phase4Page = () => {
             )}
 
             {/* Integrations */}
-            <AssistedToggle
-              id="integrations-assistance"
-              category="Technical"
-              label="Need help choosing the right integrations?"
-              price={25}
-              assistedLabel="Choose integrations for me"
-              tooltipText="We'll recommend the best third-party services for your needs and handle the integration setup."
-            />
-
-            {!hasItem('integrations-assistance') && (
-              <div style={{ marginBottom: '32px', marginTop: '24px' }}>
-                <label style={{
-                  display: 'block',
-                  fontSize: '16px',
-                  fontWeight: '700',
-                  color: '#FFFFFF',
-                  marginBottom: '16px'
-                }}>
-                  What third-party services do you need? (Optional)
-                </label>
+            <div style={{ marginBottom: '32px', marginTop: '32px' }}>
+              <label style={{
+                display: 'block',
+                fontSize: '16px',
+                fontWeight: '700',
+                color: '#FFFFFF',
+                marginBottom: '16px'
+              }}>
+                What third-party services do you need? (Optional)
+              </label>
                 
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
                   {integrationOptions.map(option => (
@@ -323,8 +321,7 @@ const Phase4Page = () => {
                     </motion.button>
                   ))}
                 </div>
-              </div>
-            )}
+            </div>
 
             {/* File Storage */}
             <div style={{ marginBottom: '32px', marginTop: '32px' }}>

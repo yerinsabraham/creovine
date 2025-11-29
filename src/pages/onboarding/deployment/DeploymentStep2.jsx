@@ -8,6 +8,7 @@ import { useMultiServiceComplete, useIsMultiService } from '../../../hooks/useMu
 import ChipGroup from '../../../components/common/ChipGroup';
 import AssistedToggle from '../../../components/common/AssistedToggle';
 import CartSummary from '../../../components/common/CartSummary';
+import TimelineSelector from '../../../components/common/TimelineSelector';
 
 const DeploymentStep2 = () => {
   const navigate = useNavigate();
@@ -20,7 +21,8 @@ const DeploymentStep2 = () => {
   const themeColor = '#06B6D4';
   
   const [requirements, setRequirements] = useState(projectData?.deployment?.requirements || []);
-  const [timeline, setTimeline] = useState(projectData?.deployment?.timeline || '');
+  const [timeline, setTimeline] = useState(projectData?.deployment?.timeline || { amount: 7, unit: 'days' });
+  const [timelineMultiplier, setTimelineMultiplier] = useState(projectData?.deployment?.timelineMultiplier || 1.0);
   const [notes, setNotes] = useState(projectData?.deployment?.notes || '');
   
   const [supportAssist, setSupportAssist] = useState(items.some(item => item.id === 'deployment-support'));
@@ -39,13 +41,6 @@ const DeploymentStep2 = () => {
     { id: 'scaling', label: 'Auto-Scaling' }
   ];
 
-  const timelineOptions = [
-    { id: 'urgent', label: 'ASAP (1-2 days)' },
-    { id: 'standard', label: '3-5 days' },
-    { id: 'relaxed', label: '1-2 weeks' },
-    { id: 'flexible', label: 'Flexible' }
-  ];
-
   useEffect(() => {
     if (supportAssist) {
       addItem({ id: 'deployment-support', name: 'Deployment Support', description: 'Ongoing support for deployment issues', price: 45, category: 'Deployment Help' });
@@ -60,20 +55,27 @@ const DeploymentStep2 = () => {
 
   const handleSubmit = async () => {
     try {
-      const serviceData = { ...projectData?.deployment, requirements, timeline, notes };
+      const serviceData = { ...projectData?.deployment, requirements, timeline, timelineMultiplier, notes };
       await updateProjectData({ deployment: serviceData });
+      
+      // Calculate estimate
+      const countryCode = location?.country || 'US';
+      const calculatedEstimate = calculateProjectEstimate(projectData, countryCode, timelineMultiplier);
+      setEstimate(calculatedEstimate);
       
       if (isMultiService) {
         await handleMultiServiceComplete(serviceData);
       } else {
-        navigate('/success');
+        // Show modal instead of navigating
+        setShowEstimateModal(true);
       }
     } catch (error) {
       console.error('Submit error:', error);
+      alert('Error submitting. Please try again.');
     }
   };
 
-  const isValid = timeline;
+  const isValid = timeline && timeline.amount > 0;
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#FAFAFA' }}>
@@ -93,13 +95,22 @@ const DeploymentStep2 = () => {
               <label style={{ display: 'block', fontSize: '16px', fontWeight: '500', color: '#333', marginBottom: '12px' }}>Deployment requirements</label>
               <ChipGroup options={requirementOptions} selected={requirements} onChange={setRequirements} multiple={true} themeColor={themeColor} />
             </div>
-            <div style={{ marginBottom: '32px' }}>
+            <div style={{ marginBottom: '16px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                 <label style={{ fontSize: '16px', fontWeight: '500', color: '#333' }}>Timeline *</label>
                 <AssistedToggle enabled={supportAssist} onToggle={setSupportAssist} price={45} label="Ongoing support" />
               </div>
-              <ChipGroup options={timelineOptions} selected={timeline} onChange={setTimeline} themeColor={themeColor} />
             </div>
+            <TimelineSelector
+              value={timeline}
+              onChange={(timelineData) => {
+                setTimeline(timelineData);
+                setTimelineMultiplier(timelineData.priceMultiplier);
+              }}
+              serviceComplexity="medium"
+              showPriceImpact={true}
+              style={{ marginBottom: '32px' }}
+            />
             <div style={{ padding: '20px', backgroundColor: 'rgba(6, 182, 212, 0.05)', border: '1px solid rgba(6, 182, 212, 0.2)', borderRadius: '12px', marginBottom: '32px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>

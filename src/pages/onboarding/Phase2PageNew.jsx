@@ -42,8 +42,16 @@ const Phase2Page = () => {
   };
 
   const handleContinue = async () => {
-    await updatePhaseData('users', formData);
-    navigate('/onboarding/phase3');
+    try {
+      console.log('Phase 2: Saving data and navigating...', formData);
+      await updatePhaseData('users', formData);
+      console.log('Phase 2: Data saved, navigating to Phase 3');
+      navigate('/onboarding/phase3');
+    } catch (error) {
+      console.error('Phase 2: Error saving data:', error);
+      // Navigate anyway to not block user
+      navigate('/onboarding/phase3');
+    }
   };
 
   const handleBack = () => {

@@ -8,6 +8,7 @@ import { useMultiServiceComplete, useIsMultiService } from '../../../hooks/useMu
 import ChipGroup from '../../../components/common/ChipGroup';
 import AssistedToggle from '../../../components/common/AssistedToggle';
 import CartSummary from '../../../components/common/CartSummary';
+import TimelineSelector from '../../../components/common/TimelineSelector';
 
 const QRCodeStep3 = () => {
   const navigate = useNavigate();
@@ -21,7 +22,8 @@ const QRCodeStep3 = () => {
   
   const [tracking, setTracking] = useState(projectData?.qrcode?.tracking || []);
   const [integration, setIntegration] = useState(projectData?.qrcode?.integration || '');
-  const [timeline, setTimeline] = useState(projectData?.qrcode?.timeline || '');
+  const [timeline, setTimeline] = useState(projectData?.qrcode?.timeline || { amount: 7, unit: 'days' });
+  const [timelineMultiplier, setTimelineMultiplier] = useState(projectData?.qrcode?.timelineMultiplier || 1.0);
   const [notes, setNotes] = useState(projectData?.qrcode?.notes || '');
   
   const [analyticsAssist, setAnalyticsAssist] = useState(items.some(item => item.id === 'qr-analytics'));
@@ -43,13 +45,6 @@ const QRCodeStep3 = () => {
     { id: 'print', label: 'Print Materials' }
   ];
 
-  const timelineOptions = [
-    { id: 'urgent', label: '1-2 days' },
-    { id: 'standard', label: '1 week' },
-    { id: 'relaxed', label: '2 weeks' },
-    { id: 'flexible', label: 'Flexible' }
-  ];
-
   useEffect(() => {
     if (analyticsAssist) {
       addItem({ id: 'qr-analytics', name: 'QR Analytics Dashboard', description: 'Custom analytics dashboard for QR code tracking', price: 55, category: 'QR Code System' });
@@ -58,7 +53,7 @@ const QRCodeStep3 = () => {
 
   const handleSubmit = async () => {
     try {
-      const serviceData = { ...projectData?.qrcode, tracking, integration, timeline, notes };
+      const serviceData = { ...projectData?.qrcode, tracking, integration, timeline, timelineMultiplier, notes };
       await updateProjectData({ qrcode: serviceData });
       
       if (isMultiService) {
@@ -71,7 +66,7 @@ const QRCodeStep3 = () => {
     }
   };
 
-  const isValid = timeline;
+  const isValid = timeline && timeline.amount > 0;
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#FAFAFA' }}>
@@ -98,10 +93,19 @@ const QRCodeStep3 = () => {
               <label style={{ display: 'block', fontSize: '16px', fontWeight: '500', color: '#333', marginBottom: '12px' }}>How will you use these?</label>
               <ChipGroup options={integrationOptions} selected={integration} onChange={setIntegration} themeColor={themeColor} />
             </div>
-            <div style={{ marginBottom: '32px' }}>
+            <div style={{ marginBottom: '16px' }}>
               <label style={{ display: 'block', fontSize: '16px', fontWeight: '500', color: '#333', marginBottom: '12px' }}>Timeline *</label>
-              <ChipGroup options={timelineOptions} selected={timeline} onChange={setTimeline} themeColor={themeColor} />
             </div>
+            <TimelineSelector
+              value={timeline}
+              onChange={(timelineData) => {
+                setTimeline(timelineData);
+                setTimelineMultiplier(timelineData.priceMultiplier);
+              }}
+              serviceComplexity="medium"
+              showPriceImpact={true}
+              style={{ marginBottom: '32px' }}
+            />
             <div style={{ marginBottom: '32px' }}>
               <label style={{ display: 'block', fontSize: '16px', fontWeight: '500', color: '#333', marginBottom: '12px' }}>Additional notes</label>
               <textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Any specific data to encode, use cases, or requirements..." style={{ width: '100%', padding: '16px', border: '1px solid #E5E7EB', borderRadius: '12px', fontSize: '15px', minHeight: '100px', resize: 'vertical', outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' }} />

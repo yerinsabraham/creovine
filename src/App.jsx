@@ -63,6 +63,7 @@ import ProjectSubmittedPage from './pages/ProjectSubmittedPage';
 import MultiServiceSummary from './pages/MultiServiceSummary';
 import ProjectQuotePage from './pages/ProjectQuotePage';
 import UserDashboard from './pages/UserDashboard';
+import ProjectDetailsPage from './pages/ProjectDetailsPage';
 import ExpertConsultationPage from './pages/ExpertConsultationPage';
 import CheckoutPage from './pages/CheckoutPage';
 import './App.css';
@@ -266,6 +267,14 @@ function App() {
           element={
             <ProtectedRoute>
               <UserDashboard />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/project/:projectId/details" 
+          element={
+            <ProtectedRoute>
+              <ProjectDetailsPage />
             </ProtectedRoute>
           } 
         />

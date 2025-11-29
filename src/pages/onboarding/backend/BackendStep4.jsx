@@ -69,7 +69,7 @@ const BackendStep4 = () => {
   };
 
   // Validation
-  const isHostingValid = formData.hostingPreference || hasItem('deployment-assist');
+  const isHostingValid = formData.hostingPreference;
   const isTimelineValid = formData.timeline && formData.timeline.amount > 0;
   const isFormValid = isHostingValid && isTimelineValid;
 
@@ -235,26 +235,16 @@ const BackendStep4 = () => {
             border: '1px solid rgba(255, 255, 255, 0.1)'
           }}>
             {/* Hosting Preference */}
-            <AssistedToggle
-              id="deployment-assist"
-              category="Backend"
-              label="Need help choosing hosting and deployment?"
-              price={35}
-              assistedLabel="Recommend for me"
-              tooltipText="We'll analyze your requirements and recommend the best hosting solution with CI/CD setup."
-            />
-
-            {!hasItem('deployment-assist') && (
-              <div style={{ marginBottom: '32px', marginTop: '24px' }}>
-                <label style={{
-                  display: 'block',
-                  fontSize: '16px',
-                  fontWeight: '700',
-                  color: '#FFFFFF',
-                  marginBottom: '12px'
-                }}>
-                  Where do you want to host? *
-                </label>
+            <div style={{ marginBottom: '32px' }}>
+              <label style={{
+                display: 'block',
+                fontSize: '16px',
+                fontWeight: '700',
+                color: '#FFFFFF',
+                marginBottom: '12px'
+              }}>
+                Where do you want to host? *
+              </label>
                 <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
                   {hostingOptions.map(option => (
                     <button
@@ -279,8 +269,7 @@ const BackendStep4 = () => {
                     </button>
                   ))}
                 </div>
-              </div>
-            )}
+            </div>
 
             {/* Security Requirements */}
             <div style={{ marginBottom: '32px' }}>

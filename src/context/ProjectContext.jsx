@@ -267,37 +267,54 @@ export const ProjectProvider = ({ children }) => {
 
   // Submit project
   const submitProject = async (finalData) => {
-    if (!currentUser) return;
+    if (!currentUser) {
+      throw new Error('User not authenticated');
+    }
 
     const dataToSubmit = finalData || projectData;
     
     // Filter out metadata fields from phases
     const { primaryService, addOns, serviceCategory, serviceName, completedServices, currentServiceIndex, ...phasesOnly } = dataToSubmit;
 
-    const projectRef = doc(db, 'projects', `${currentUser.uid}_${Date.now()}`);
-    await setDoc(projectRef, {
+    // Create submitted project with userId in document ID for Firestore rules
+    const submittedProjectId = `${currentUser.uid}_submitted_${Date.now()}`;
+    const projectRef = doc(db, 'projects', submittedProjectId);
+    
+    // Build submission data - only include defined fields
+    const submissionData = {
       userId: currentUser.uid,
       userEmail: currentUser.email,
       userName: currentUser.displayName || currentUser.email,
       phases: phasesOnly,
-      // Save metadata at root level
-      primaryService,
-      addOns,
-      serviceCategory,
-      serviceName,
-      completedServices,
-      currentServiceIndex,
       status: 'submitted',
       createdAt: serverTimestamp(),
       submittedAt: serverTimestamp()
-    });
+    };
 
-    // Update user onboarding status
-    await setDoc(doc(db, 'users', currentUser.uid), {
-      onboardingComplete: true,
-      email: currentUser.email,
-      displayName: currentUser.displayName || currentUser.email
-    }, { merge: true });
+    // Only add metadata if it exists
+    if (primaryService) submissionData.primaryService = primaryService;
+    if (addOns && addOns.length > 0) submissionData.addOns = addOns;
+    if (serviceCategory) submissionData.serviceCategory = serviceCategory;
+    if (serviceName) submissionData.serviceName = serviceName;
+    if (completedServices && completedServices.length > 0) submissionData.completedServices = completedServices;
+    if (typeof currentServiceIndex === 'number') submissionData.currentServiceIndex = currentServiceIndex;
+    
+    try {
+      await setDoc(projectRef, submissionData);
+
+      // Update user onboarding status
+      await setDoc(doc(db, 'users', currentUser.uid), {
+        onboardingComplete: true,
+        email: currentUser.email,
+        displayName: currentUser.displayName || currentUser.email,
+        lastSubmittedAt: serverTimestamp()
+      }, { merge: true });
+      
+      console.log('Project submitted successfully:', submittedProjectId);
+    } catch (error) {
+      console.error('Error submitting project:', error);
+      throw error;
+    }
   };
 
   const value = {
