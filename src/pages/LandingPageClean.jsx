@@ -87,7 +87,8 @@ const LandingPageClean = () => {
       setLoading(true);
       setError('');
       await signInWithGoogle();
-      navigate('/onboarding');
+      setShowAuthModal(false);
+      navigate('/dashboard');
     } catch (err) {
       setError(err.message);
     } finally {
@@ -107,7 +108,8 @@ const LandingPageClean = () => {
         await login(email, password);
       }
       
-      navigate('/onboarding');
+      setShowAuthModal(false);
+      navigate('/dashboard');
     } catch (err) {
       setError(err.message);
     } finally {
@@ -195,6 +197,26 @@ const LandingPageClean = () => {
             gap: '12px', 
             alignItems: 'center' 
           }}>
+            {!currentUser && (
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setShowAuthModal(true)}
+                style={{
+                  backgroundColor: 'transparent',
+                  color: 'white',
+                  padding: '10px 20px',
+                  borderRadius: '24px',
+                  border: '2px solid rgba(255, 255, 255, 0.2)',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  transition: 'all 0.2s'
+                }}
+              >
+                Login / Sign Up
+              </motion.button>
+            )}
             {currentUser && (
               <motion.button
                 whileHover={{ scale: 1.05 }}
@@ -324,6 +346,50 @@ const LandingPageClean = () => {
               }}>
                 FAQ
               </button>
+              {!currentUser && (
+                <button
+                  onClick={() => {
+                    setShowAuthModal(true);
+                    setIsMobileMenuOpen(false);
+                  }}
+                  style={{
+                    backgroundColor: 'transparent',
+                    color: 'white',
+                    padding: '16px 20px',
+                    borderRadius: '12px',
+                    border: '2px solid rgba(255, 255, 255, 0.2)',
+                    cursor: 'pointer',
+                    fontSize: '16px',
+                    fontWeight: '600',
+                    marginBottom: '12px',
+                    width: '100%'
+                  }}
+                >
+                  Login / Sign Up
+                </button>
+              )}
+              {currentUser && (
+                <button
+                  onClick={() => {
+                    navigate('/dashboard');
+                    setIsMobileMenuOpen(false);
+                  }}
+                  style={{
+                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                    color: 'white',
+                    padding: '16px 20px',
+                    borderRadius: '12px',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    cursor: 'pointer',
+                    fontSize: '16px',
+                    fontWeight: '600',
+                    marginBottom: '12px',
+                    width: '100%'
+                  }}
+                >
+                  Dashboard
+                </button>
+              )}
               {isAdmin && (
                 <button
                   onClick={() => {
