@@ -13,7 +13,7 @@ const WebsiteUpgradeStep2 = () => {
   const navigate = useNavigate();
   const { currentUser, logout } = useAuth();
   const { projectData, updateProjectData } = useProject();
-  const { addItem, removeItem, items } = useCart();
+  const { } = useCart();
   const isMobile = useIsMobile();
   
   const themeColor = '#8B5CF6';
@@ -23,33 +23,9 @@ const WebsiteUpgradeStep2 = () => {
     additionalDetails: projectData?.websiteUpgrade?.additionalDetails || ''
   });
 
-  const [needsHelp, setNeedsHelp] = useState(
-    items?.some(item => item.id === 'website-upgrade-planning') || false
-  );
-
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
-
-  // Toggle assistance
-  useEffect(() => {
-    if (!items) return;
-    
-    const itemId = 'website-upgrade-planning';
-    const itemExists = items.some(item => item.id === itemId);
-
-    if (needsHelp && !itemExists) {
-      addItem({
-        id: itemId,
-        name: 'Feature Planning Assistance',
-        price: 200,
-        description: 'Expert help in planning and prioritizing your website features',
-        category: 'assistance'
-      });
-    } else if (!needsHelp && itemExists) {
-      removeItem(itemId);
-    }
-  }, [needsHelp, items, addItem, removeItem]);
 
   const handleFeatureToggle = (feature) => {
     setFormData(prev => ({
@@ -259,17 +235,15 @@ const WebsiteUpgradeStep2 = () => {
           }}>
             {/* Features Selection */}
             <div style={{ marginBottom: '32px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
-                <label style={{ fontSize: '16px', fontWeight: '700', color: '#FFFFFF' }}>
-                  Select Features You Need *
-                </label>
-                <AssistedToggle
-                  enabled={needsHelp}
-                  onToggle={setNeedsHelp}
-                  price={200}
-                  label="Feature Planning Assistance"
-                />
-              </div>
+              <label style={{
+                display: 'block',
+                fontSize: '16px',
+                fontWeight: '700',
+                color: '#FFFFFF',
+                marginBottom: '12px'
+              }}>
+                Select Features You Need *
+              </label>
               <p style={{
                 fontSize: '13px',
                 color: 'rgba(255, 255, 255, 0.5)',

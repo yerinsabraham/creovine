@@ -13,7 +13,7 @@ const WebsiteUpgradeStep1 = () => {
   const navigate = useNavigate();
   const { currentUser, logout } = useAuth();
   const { projectData, updateProjectData } = useProject();
-  const { addItem, removeItem, items } = useCart();
+  const { hasItem } = useCart();
   const isMobile = useIsMobile();
   
   const themeColor = '#8B5CF6';
@@ -25,33 +25,9 @@ const WebsiteUpgradeStep1 = () => {
     hasAccess: projectData?.websiteUpgrade?.hasAccess || ''
   });
 
-  const [needsHelp, setNeedsHelp] = useState(
-    items?.some(item => item.id === 'website-upgrade-consultation') || false
-  );
-
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
-
-  // Toggle assistance
-  useEffect(() => {
-    if (!items) return;
-    
-    const itemId = 'website-upgrade-consultation';
-    const itemExists = items.some(item => item.id === itemId);
-
-    if (needsHelp && !itemExists) {
-      addItem({
-        id: itemId,
-        name: 'Website Upgrade Consultation',
-        price: 150,
-        description: 'Expert consultation for your website upgrade',
-        category: 'assistance'
-      });
-    } else if (!needsHelp && itemExists) {
-      removeItem(itemId);
-    }
-  }, [needsHelp, items, addItem, removeItem]);
 
   const handleInputChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -73,9 +49,11 @@ const WebsiteUpgradeStep1 = () => {
     }
   };
 
+  const isTypeValid = formData.updateType.trim() || hasItem('website-upgrade-type-assist');
+  
   const isValid = formData.websiteName.trim() && 
                   formData.currentUrl.trim() && 
-                  formData.updateType && 
+                  isTypeValid && 
                   formData.hasAccess;
 
   const updateTypeOptions = [
@@ -316,49 +294,58 @@ const WebsiteUpgradeStep1 = () => {
             </div>
 
             {/* Update Type */}
-            <div style={{ marginBottom: '32px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
-                <label style={{ fontSize: '16px', fontWeight: '700', color: '#FFFFFF' }}>
+            <AssistedToggle
+              id="website-upgrade-type-assist"
+              category="Website Upgrade"
+              label="What type of update do you need?"
+              price={150}
+              assistedLabel="Recommend for me"
+              tooltipText="We'll analyze your website and recommend the best update approach for your needs."
+            />
+
+            {!hasItem('website-upgrade-type-assist') && (
+              <div style={{ marginBottom: '32px' }}>
+                <label style={{
+                  display: 'block',
+                  fontSize: '16px',
+                  fontWeight: '700',
+                  color: '#FFFFFF',
+                  marginBottom: '12px'
+                }}>
                   What type of update do you need? *
                 </label>
-                <AssistedToggle
-                  enabled={needsHelp}
-                  onToggle={setNeedsHelp}
-                  price={150}
-                  label="Need help deciding?"
-                />
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)',
+                  gap: '12px'
+                }}>
+                  {updateTypeOptions.map((option) => (
+                    <button
+                      key={option}
+                      onClick={() => handleInputChange('updateType', option)}
+                      style={{
+                        padding: '16px',
+                        backgroundColor: formData.updateType === option 
+                          ? `${themeColor}22` 
+                          : 'rgba(255, 255, 255, 0.05)',
+                        border: formData.updateType === option
+                          ? `2px solid ${themeColor}`
+                          : '2px solid rgba(255, 255, 255, 0.1)',
+                        borderRadius: '12px',
+                        color: formData.updateType === option ? themeColor : '#FFFFFF',
+                        fontSize: '14px',
+                        fontWeight: formData.updateType === option ? '700' : '500',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s',
+                        textAlign: 'center'
+                      }}
+                    >
+                      {option}
+                    </button>
+                  ))}
+                </div>
               </div>
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)',
-                gap: '12px'
-              }}>
-                {updateTypeOptions.map((option) => (
-                  <button
-                    key={option}
-                    onClick={() => handleInputChange('updateType', option)}
-                    style={{
-                      padding: '16px',
-                      backgroundColor: formData.updateType === option 
-                        ? `${themeColor}22` 
-                        : 'rgba(255, 255, 255, 0.05)',
-                      border: formData.updateType === option
-                        ? `2px solid ${themeColor}`
-                        : '1px solid rgba(255, 255, 255, 0.1)',
-                      borderRadius: '12px',
-                      color: formData.updateType === option ? themeColor : '#FFFFFF',
-                      fontSize: '14px',
-                      fontWeight: formData.updateType === option ? '700' : '500',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s',
-                      textAlign: 'center'
-                    }}
-                  >
-                    {option}
-                  </button>
-                ))}
-              </div>
-            </div>
+            )}
 
             {/* Access Level */}
             <div style={{ marginBottom: '0' }}>

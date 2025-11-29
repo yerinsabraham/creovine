@@ -17,7 +17,7 @@ const WebsiteUpgradeStep3 = () => {
   const navigate = useNavigate();
   const { currentUser, logout } = useAuth();
   const { projectData, updateProjectData } = useProject();
-  const { addItem, removeItem, items } = useCart();
+  const { hasItem } = useCart();
   const isMobile = useIsMobile();
   
   const themeColor = '#8B5CF6';
@@ -28,35 +28,11 @@ const WebsiteUpgradeStep3 = () => {
     specialRequirements: projectData?.websiteUpgrade?.specialRequirements || ''
   });
 
-  const [needsHelp, setNeedsHelp] = useState(
-    items?.some(item => item.id === 'website-upgrade-consultation-final') || false
-  );
-
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
-
-  // Toggle assistance
-  useEffect(() => {
-    if (!items) return;
-    
-    const itemId = 'website-upgrade-consultation-final';
-    const itemExists = items.some(item => item.id === itemId);
-
-    if (needsHelp && !itemExists) {
-      addItem({
-        id: itemId,
-        name: 'Project Consultation',
-        price: 250,
-        description: 'Final consultation to align on project scope and timeline',
-        category: 'assistance'
-      });
-    } else if (!needsHelp && itemExists) {
-      removeItem(itemId);
-    }
-  }, [needsHelp, items, addItem, removeItem]);
 
   const handleTimelineChange = (timeline) => {
     setFormData(prev => ({ ...prev, timeline }));
@@ -306,19 +282,27 @@ const WebsiteUpgradeStep3 = () => {
               />
             </div>
 
-            {/* Budget */}
+            {/* Consultation Toggle */}
+            <AssistedToggle
+              id="website-upgrade-consultation"
+              category="Website Upgrade"
+              label="Want help planning your budget and timeline?"
+              price={250}
+              assistedLabel="Schedule consultation"
+              tooltipText="Get expert guidance on budget allocation and realistic timelines for your website upgrade project."
+            />
+
+            {/* Budget Range */}
             <div style={{ marginBottom: '32px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
-                <label style={{ fontSize: '16px', fontWeight: '700', color: '#FFFFFF' }}>
-                  What's your budget range? *
-                </label>
-                <AssistedToggle
-                  enabled={needsHelp}
-                  onToggle={setNeedsHelp}
-                  price={250}
-                  label="Project Consultation"
-                />
-              </div>
+              <label style={{
+                display: 'block',
+                fontSize: '16px',
+                fontWeight: '700',
+                color: '#FFFFFF',
+                marginBottom: '12px'
+              }}>
+                What's your budget range? *
+              </label>
               <p style={{
                 fontSize: '13px',
                 color: 'rgba(255, 255, 255, 0.5)',
