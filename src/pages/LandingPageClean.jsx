@@ -255,24 +255,47 @@ const LandingPageClean = () => {
                 Admin
               </motion.button>
             )}
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={handleGetStarted}
-              style={{
-                background: 'linear-gradient(135deg, #29BD98 0%, #2497F9 100%)',
-                color: 'white',
-                padding: '12px 28px',
-                borderRadius: '24px',
-                border: 'none',
-                cursor: 'pointer',
-                fontSize: '14px',
-                fontWeight: '700',
-                boxShadow: '0 4px 20px rgba(41, 189, 152, 0.3)'
-              }}
-            >
-              Get Started
-            </motion.button>
+            {currentUser ? (
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={async () => {
+                  await logout();
+                  navigate('/');
+                }}
+                style={{
+                  background: 'transparent',
+                  color: 'white',
+                  padding: '12px 28px',
+                  borderRadius: '24px',
+                  border: '2px solid rgba(255, 255, 255, 0.3)',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: '700'
+                }}
+              >
+                Logout
+              </motion.button>
+            ) : (
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={handleGetStarted}
+                style={{
+                  background: 'linear-gradient(135deg, #29BD98 0%, #2497F9 100%)',
+                  color: 'white',
+                  padding: '12px 28px',
+                  borderRadius: '24px',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: '700',
+                  boxShadow: '0 4px 20px rgba(41, 189, 152, 0.3)'
+                }}
+              >
+                Get Started
+              </motion.button>
+            )}
           </div>
 
           {/* Mobile Hamburger */}
@@ -412,26 +435,50 @@ const LandingPageClean = () => {
                   Admin Dashboard
                 </button>
               )}
-              <button
-                onClick={() => {
-                  handleGetStarted();
-                  setIsMobileMenuOpen(false);
-                }}
-                style={{
-                  background: 'linear-gradient(135deg, #29BD98 0%, #2497F9 100%)',
-                  color: 'white',
-                  padding: '16px 20px',
-                  borderRadius: '24px',
-                  border: 'none',
-                  cursor: 'pointer',
-                  fontSize: '16px',
-                  fontWeight: '700',
-                  marginTop: 'auto',
-                  width: '100%'
-                }}
-              >
-                Get Started
-              </button>
+              {currentUser ? (
+                <button
+                  onClick={async () => {
+                    await logout();
+                    setIsMobileMenuOpen(false);
+                    navigate('/');
+                  }}
+                  style={{
+                    background: 'transparent',
+                    color: 'white',
+                    padding: '16px 20px',
+                    borderRadius: '24px',
+                    border: '2px solid rgba(255, 255, 255, 0.3)',
+                    cursor: 'pointer',
+                    fontSize: '16px',
+                    fontWeight: '700',
+                    marginTop: 'auto',
+                    width: '100%'
+                  }}
+                >
+                  Logout
+                </button>
+              ) : (
+                <button
+                  onClick={() => {
+                    handleGetStarted();
+                    setIsMobileMenuOpen(false);
+                  }}
+                  style={{
+                    background: 'linear-gradient(135deg, #29BD98 0%, #2497F9 100%)',
+                    color: 'white',
+                    padding: '16px 20px',
+                    borderRadius: '24px',
+                    border: 'none',
+                    cursor: 'pointer',
+                    fontSize: '16px',
+                    fontWeight: '700',
+                    marginTop: 'auto',
+                    width: '100%'
+                  }}
+                >
+                  Get Started
+                </button>
+              )}
             </motion.div>
           )}
         </AnimatePresence>
@@ -519,7 +566,7 @@ const LandingPageClean = () => {
               <motion.button
                 whileHover={{ scale: 1.05, y: -2 }}
                 whileTap={{ scale: 0.95 }}
-                onClick={handleGetStarted}
+                onClick={() => currentUser ? navigate('/dashboard') : handleGetStarted()}
                 style={{
                   background: 'linear-gradient(135deg, #29BD98 0%, #2497F9 100%)',
                   color: 'white',
@@ -533,7 +580,7 @@ const LandingPageClean = () => {
                   minHeight: '56px'
                 }}
               >
-                Get Started Now
+                {currentUser ? 'Dashboard' : 'Get Started Now'}
               </motion.button>
               
               <motion.button
