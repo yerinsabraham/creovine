@@ -19,6 +19,8 @@ const UserDashboard = () => {
   const [showMessages, setShowMessages] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [projectToDelete, setProjectToDelete] = useState(null);
   const navigate = useNavigate();
   const isMobile = useIsMobile();
 
@@ -184,44 +186,52 @@ const UserDashboard = () => {
     }
   };
 
-  const handleDeleteProject = async (projectId, projectName) => {
-    const confirmed = window.confirm(
-      `Are you sure you want to delete "${projectName}"?\n\nThis action cannot be undone.`
-    );
-    
-    if (!confirmed) return;
+  const handleDeleteProject = (projectId, projectName) => {
+    const project = projects.find(p => p.id === projectId);
+    setProjectToDelete({ id: projectId, name: projectName, status: project?.status });
+    setShowDeleteModal(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!projectToDelete) return;
     
     try {
       // Create notification for admin if not a draft
-      const projectToDelete = projects.find(p => p.id === projectId);
-      if (projectToDelete && projectToDelete.status !== 'draft') {
+      const project = projects.find(p => p.id === projectToDelete.id);
+      if (project && project.status !== 'draft') {
         await addDoc(collection(db, 'adminNotifications'), {
           type: 'project-deleted',
-          projectId: projectId,
-          projectName: projectName,
+          projectId: projectToDelete.id,
+          projectName: projectToDelete.name,
           userId: currentUser.uid,
           userEmail: currentUser.email,
           userName: currentUser.displayName || currentUser.email,
-          status: projectToDelete.status,
+          status: project.status,
           createdAt: serverTimestamp()
         });
       }
 
-      await deleteProject(projectId);
+      await deleteProject(projectToDelete.id);
       
       // Refresh the projects list
       await fetchUserProjects();
       
       // If deleted project was selected, select another one
-      if (selectedProject?.id === projectId) {
-        setSelectedProject(projects.length > 1 ? projects.find(p => p.id !== projectId) : null);
+      if (selectedProject?.id === projectToDelete.id) {
+        setSelectedProject(projects.length > 1 ? projects.find(p => p.id !== projectToDelete.id) : null);
       }
       
-      alert('Project deleted successfully.');
+      setShowDeleteModal(false);
+      setProjectToDelete(null);
     } catch (error) {
       console.error('Error deleting project:', error);
       alert('Failed to delete project. Please try again.');
     }
+  };
+
+  const cancelDelete = () => {
+    setShowDeleteModal(false);
+    setProjectToDelete(null);
   };
 
   if (loading) {
@@ -590,29 +600,43 @@ const UserDashboard = () => {
                       return canDelete;
                     })() && (
                       <motion.button
-                        whileHover={{ scale: 1.1 }}
+                        whileHover={{ scale: 1.15 }}
                         whileTap={{ scale: 0.9 }}
                         onClick={(e) => {
                           e.stopPropagation();
                           handleDeleteProject(project.id, getProjectName(project));
                         }}
+                        title="Delete project"
                         style={{
                           position: 'absolute',
-                          top: '8px',
-                          right: '8px',
-                          background: '#E74C3C',
-                          border: '2px solid #C0392B',
-                          borderRadius: '8px',
-                          padding: '8px 12px',
-                          fontSize: '14px',
-                          color: '#FFFFFF',
+                          top: '12px',
+                          right: '12px',
+                          width: '32px',
+                          height: '32px',
+                          background: 'rgba(231, 76, 60, 0.1)',
+                          border: '1.5px solid rgba(231, 76, 60, 0.4)',
+                          borderRadius: '50%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '16px',
+                          color: '#E74C3C',
                           cursor: 'pointer',
-                          fontWeight: '700',
                           zIndex: 1000,
-                          boxShadow: '0 2px 8px rgba(231, 76, 60, 0.4)'
+                          transition: 'all 0.2s ease'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = '#E74C3C';
+                          e.currentTarget.style.color = '#FFFFFF';
+                          e.currentTarget.style.borderColor = '#E74C3C';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = 'rgba(231, 76, 60, 0.1)';
+                          e.currentTarget.style.color = '#E74C3C';
+                          e.currentTarget.style.borderColor = 'rgba(231, 76, 60, 0.4)';
                         }}
                       >
-                        🗑️ Delete
+                        🗑️
                       </motion.button>
                     )}
                     
@@ -621,23 +645,9 @@ const UserDashboard = () => {
                       fontWeight: '600',
                       color: '#FFFFFF',
                       marginBottom: '8px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px'
+                      paddingRight: '40px'
                     }}>
                       {getProjectName(project)}
-                      {project.status === 'draft' && (
-                        <span style={{
-                          fontSize: '11px',
-                          padding: '2px 8px',
-                          backgroundColor: 'rgba(255, 165, 0, 0.2)',
-                          border: '1px solid rgba(255, 165, 0, 0.4)',
-                          borderRadius: '6px',
-                          color: '#FFA500'
-                        }}>
-                          Click to continue
-                        </span>
-                      )}
                     </div>
                     <div style={{
                       display: 'flex',
@@ -658,6 +668,20 @@ const UserDashboard = () => {
                         {getStatusLabel(project.status)}
                       </span>
                     </div>
+                    {project.status === 'draft' && (
+                      <div style={{
+                        fontSize: '11px',
+                        padding: '4px 10px',
+                        backgroundColor: 'rgba(255, 165, 0, 0.2)',
+                        border: '1px solid rgba(255, 165, 0, 0.4)',
+                        borderRadius: '6px',
+                        color: '#FFA500',
+                        display: 'inline-block',
+                        marginBottom: '8px'
+                      }}>
+                        Click to continue
+                      </div>
+                    )}
                     <div style={{
                       fontSize: '12px',
                       color: 'rgba(255, 255, 255, 0.5)'
@@ -1145,6 +1169,151 @@ const UserDashboard = () => {
         )}
       </div>
     </div>
+
+    {/* Delete Confirmation Modal */}
+    <AnimatePresence>
+      {showDeleteModal && projectToDelete && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          onClick={cancelDelete}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.7)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 10000,
+            padding: '20px'
+          }}
+        >
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.9, opacity: 0 }}
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              backgroundColor: '#1A2332',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              borderRadius: '16px',
+              padding: '32px',
+              maxWidth: '500px',
+              width: '100%'
+            }}
+          >
+            {/* Warning Icon */}
+            <div style={{
+              width: '64px',
+              height: '64px',
+              backgroundColor: 'rgba(231, 76, 60, 0.1)',
+              border: '2px solid rgba(231, 76, 60, 0.3)',
+              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 24px',
+              fontSize: '32px'
+            }}>
+              ⚠️
+            </div>
+
+            {/* Title */}
+            <h2 style={{
+              fontSize: '24px',
+              fontWeight: '700',
+              color: '#FFFFFF',
+              textAlign: 'center',
+              marginBottom: '12px'
+            }}>
+              Delete Project?
+            </h2>
+
+            {/* Project Name */}
+            <div style={{
+              backgroundColor: 'rgba(255, 255, 255, 0.05)',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              borderRadius: '8px',
+              padding: '16px',
+              marginBottom: '16px'
+            }}>
+              <div style={{
+                fontSize: '14px',
+                color: 'rgba(255, 255, 255, 0.6)',
+                marginBottom: '8px'
+              }}>
+                Project Name
+              </div>
+              <div style={{
+                fontSize: '16px',
+                fontWeight: '600',
+                color: '#FFFFFF'
+              }}>
+                {projectToDelete.name}
+              </div>
+            </div>
+
+            {/* Warning Message */}
+            <p style={{
+              fontSize: '15px',
+              color: 'rgba(255, 255, 255, 0.7)',
+              textAlign: 'center',
+              marginBottom: '24px',
+              lineHeight: '1.6'
+            }}>
+              This action cannot be undone. All project data will be permanently deleted.
+            </p>
+
+            {/* Action Buttons */}
+            <div style={{
+              display: 'flex',
+              gap: '12px'
+            }}>
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={cancelDelete}
+                style={{
+                  flex: 1,
+                  backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                  color: '#FFFFFF',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  borderRadius: '12px',
+                  padding: '14px',
+                  fontSize: '15px',
+                  fontWeight: '600',
+                  cursor: 'pointer'
+                }}
+              >
+                Cancel
+              </motion.button>
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={confirmDelete}
+                style={{
+                  flex: 1,
+                  backgroundColor: '#E74C3C',
+                  color: '#FFFFFF',
+                  border: 'none',
+                  borderRadius: '12px',
+                  padding: '14px',
+                  fontSize: '15px',
+                  fontWeight: '600',
+                  cursor: 'pointer'
+                }}
+              >
+                Yes, Delete
+              </motion.button>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
     </>
   );
 };
