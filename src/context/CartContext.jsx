@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { getLocalizedPrice } from '../utils/geolocation';
 
 const CartContext = createContext();
 
@@ -13,24 +14,39 @@ export const useCart = () => {
 export const CartProvider = ({ children }) => {
   const [cartItems, setCartItems] = useState([]);
   const [total, setTotal] = useState(0);
+  const [currency, setCurrency] = useState('USD');
+  const [countryCode, setCountryCode] = useState('US');
 
   // Calculate total whenever cart items change
   useEffect(() => {
-    const newTotal = cartItems.reduce((sum, item) => sum + item.price, 0);
+    const newTotal = cartItems.reduce((sum, item) => {
+      // Use localized price if available, otherwise use base price
+      return sum + (item.localPrice || item.price);
+    }, 0);
     setTotal(newTotal);
-  }, [cartItems]);
+  }, [cartItems, currency]);
 
   const addItem = useCallback((item) => {
     // item structure: { id, category, label, price, description }
+    // Add localized pricing on the fly
     setCartItems(prev => {
       // Check if item already exists
       const exists = prev.find(i => i.id === item.id);
       if (exists) {
         return prev; // Don't add duplicates
       }
-      return [...prev, item];
+      
+      // Add localized price based on current country
+      const localizedPrice = getLocalizedPrice(item.price, countryCode);
+      const itemWithLocalPrice = {
+        ...item,
+        localPrice: localizedPrice.amount,
+        localCurrency: localizedPrice.currency
+      };
+      
+      return [...prev, itemWithLocalPrice];
     });
-  }, []);
+  }, [countryCode]);
 
   const removeItem = useCallback((itemId) => {
     setCartItems(prev => prev.filter(item => item.id !== itemId));
@@ -44,15 +60,40 @@ export const CartProvider = ({ children }) => {
 
   const clearCart = useCallback(() => {
     setCartItems([]);
+  }, [])updateCurrency = useCallback((newCountryCode) => {
+    setCountryCode(newCountryCode);
+    const localizedPrice = getLocalizedPrice(100, newCountryCode);
+    setCurrency(localizedPrice.currency);
+    
+    // Update all cart items with new localized prices
+    setCartItems(prev => prev.map(item => {
+      const newLocalPrice = getLocalizedPrice(item.price, newCountryCode);
+      return {
+        ...item,
+        localPrice: newLocalPrice.amount,
+        localCurrency: newLocalPrice.currency
+      };
+    }));
   }, []);
 
-  const hasItem = useCallback((itemId) => {
-    return cartItems.some(item => item.id === itemId);
-  }, [cartItems]);
+  const getTotalFormatted = useCallback(() => {
+    const localizedTotal = getLocalizedPrice(total, countryCode);
+    return localizedTotal.formatted;
+  }, [total, countryCode]);
 
-  const getItemsByCategory = (category) => {
-    return cartItems.filter(item => item.category === category);
-  };
+  const value = {
+    cartItems,
+    total,
+    currency,
+    countryCode,
+    addItem,
+    removeItem,
+    updateItem,
+    clearCart,
+    hasItem,
+    getItemsByCategory,
+    updateCurrency,
+    getTotalFormatted
 
   const value = {
     cartItems,

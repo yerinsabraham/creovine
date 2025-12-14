@@ -221,6 +221,7 @@ const CheckoutPage = () => {
           )}
           
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {/* Nigerian users - Show Paystack as primary */}
             {paymentProvider === 'paystack' ? (
               <>
                 <label style={{
@@ -278,6 +279,7 @@ const CheckoutPage = () => {
                 </label>
               </>
             ) : (
+              /* Non-Nigerian users - Show Stripe and Crypto */
               <>
                 <label style={{
                   display: 'flex',
@@ -286,7 +288,8 @@ const CheckoutPage = () => {
                   backgroundColor: paymentMethod === 'stripe' ? 'rgba(41, 189, 152, 0.1)' : 'rgba(255, 255, 255, 0.03)',
                   border: paymentMethod === 'stripe' ? '2px solid #29BD98' : '1px solid rgba(255, 255, 255, 0.1)',
                   borderRadius: '12px',
-                  cursor: 'pointer'
+                  cursor: 'pointer',
+                  opacity: 0.5
                 }}>
                   <input
                     type="radio"
@@ -295,13 +298,14 @@ const CheckoutPage = () => {
                     checked={paymentMethod === 'stripe'}
                     onChange={(e) => setPaymentMethod(e.target.value)}
                     style={{ marginRight: '12px' }}
+                    disabled
                   />
                   <div>
                     <div style={{ color: '#FFFFFF', fontSize: '15px', fontWeight: '600' }}>
-                      💳 Credit Card (Stripe)
+                      💳 Credit Card
                     </div>
                     <div style={{ fontSize: '13px', color: 'rgba(255, 255, 255, 0.6)', marginTop: '4px' }}>
-                      Visa, Mastercard, American Express
+                      International card payments coming soon
                     </div>
                   </div>
                 </label>
@@ -310,18 +314,58 @@ const CheckoutPage = () => {
                   display: 'flex',
                   alignItems: 'center',
                   padding: '16px',
-                  backgroundColor: paymentMethod === 'paystack' ? 'rgba(41, 189, 152, 0.1)' : 'rgba(255, 255, 255, 0.03)',
-                  border: paymentMethod === 'paystack' ? '2px solid #29BD98' : '1px solid rgba(255, 255, 255, 0.1)',
+                  backgroundColor: paymentMethod === 'crypto' ? 'rgba(41, 189, 152, 0.1)' : 'rgba(255, 255, 255, 0.03)',
+                  border: paymentMethod === 'crypto' ? '2px solid #29BD98' : '1px solid rgba(255, 255, 255, 0.1)',
                   borderRadius: '12px',
-                  cursor: 'pointer',
-                  opacity: 0.6
+                  cursor: 'pointer'
+                }}>
+                  <input
+                    type="radio"
+                    name="payment"
+                    value="crypto"
+                    checked={paymentMethod === 'crypto'}
+                    onChange={(e) => setPaymentMethod(e.target.value)}
+                    style={{ marginRight: '12px' }}
+                  />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                      <span style={{ color: '#FFFFFF', fontSize: '15px', fontWeight: '600' }}>
+                        🪙 Crypto Payment
+                      </span>
+                      <span style={{
+                        fontSize: '11px',
+                        color: '#29BD98',
+                        backgroundColor: 'rgba(41, 189, 152, 0.15)',
+                        padding: '2px 8px',
+                        borderRadius: '4px',
+                        fontWeight: '600'
+                      }}>
+                        EARLY ACCESS
+                      </span>
+                    </div>
+                    <div style={{ fontSize: '13px', color: 'rgba(255, 255, 255, 0.6)' }}>
+                      Pay with USDT or USDC
+                    </div>
+                  </div>
+                </label>
+                
+                {/* Hidden Paystack option for non-Nigerians */}
+                <label style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  padding: '16px',
+                  backgroundColor: 'rgba(255, 255, 255, 0.03)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  borderRadius: '12px',
+                  cursor: 'not-allowed',
+                  opacity: 0.4
                 }}>
                   <input
                     type="radio"
                     name="payment"
                     value="paystack"
-                    checked={paymentMethod === 'paystack'}
-                    onChange={(e) => setPaymentMethod(e.target.value)}
+                    checked={false}
+                    onChange={() => {}}
                     style={{ marginRight: '12px' }}
                     disabled
                   />
@@ -337,6 +381,73 @@ const CheckoutPage = () => {
               </>
             )}
           </div>
+          
+          {/* Crypto Payment Details (shown when crypto selected) */}
+          {paymentMethod === 'crypto' && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              style={{
+                marginTop: '16px',
+                padding: '20px',
+                backgroundColor: 'rgba(41, 189, 152, 0.05)',
+                borderRadius: '12px',
+                border: '1px solid rgba(41, 189, 152, 0.2)'
+              }}
+            >
+              <div style={{ marginBottom: '16px' }}>
+                <div style={{ fontSize: '14px', fontWeight: '600', color: '#FFFFFF', marginBottom: '8px' }}>
+                  Select Cryptocurrency
+                </div>
+                <div style={{ display: 'flex', gap: '12px' }}>
+                  <label style={{
+                    flex: 1,
+                    padding: '12px',
+                    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                    border: '2px solid #29BD98',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    textAlign: 'center'
+                  }}>
+                    <input type="radio" name="crypto" value="usdt" defaultChecked style={{ display: 'none' }} />
+                    <div style={{ fontSize: '13px', fontWeight: '600', color: '#FFFFFF' }}>USDT</div>
+                    <div style={{ fontSize: '11px', color: 'rgba(255, 255, 255, 0.6)', marginTop: '2px' }}>Tether</div>
+                  </label>
+                  <label style={{
+                    flex: 1,
+                    padding: '12px',
+                    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    textAlign: 'center'
+                  }}>
+                    <input type="radio" name="crypto" value="usdc" style={{ display: 'none' }} />
+                    <div style={{ fontSize: '13px', fontWeight: '600', color: '#FFFFFF' }}>USDC</div>
+                    <div style={{ fontSize: '11px', color: 'rgba(255, 255, 255, 0.6)', marginTop: '2px' }}>USD Coin</div>
+                  </label>
+                </div>
+              </div>
+              <div style={{
+                fontSize: '13px',
+                color: 'rgba(255, 255, 255, 0.7)',
+                padding: '12px',
+                backgroundColor: 'rgba(0, 0, 0, 0.2)',
+                borderRadius: '8px'
+              }}>
+                <div style={{ marginBottom: '8px' }}>
+                  💡 <strong>How crypto payment works:</strong>
+                </div>
+                <div style={{ paddingLeft: '20px', lineHeight: '1.6' }}>
+                  1. You'll receive a wallet address<br />
+                  2. Send exact USD amount in USDT/USDC<br />
+                  3. We confirm payment within 10 minutes<br />
+                  4. Your project starts immediately
+                </div>
+              </div>
+            </motion.div>
+          )}
         </motion.div>
 
         {/* Checkout Button */}

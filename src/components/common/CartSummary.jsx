@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useCart } from '../../context/CartContext';
+import { useLocation } from '../../context/LocationContext';
 import { useIsMobile } from '../../hooks/useMediaQuery';
 
 const CartSummary = () => {
-  const { cartItems, total } = useCart();
+  const { cartItems, total, currency } = useCart();
+  const { formatPrice } = useLocation();
   const [isExpanded, setIsExpanded] = useState(false);
   const isMobile = useIsMobile();
 
@@ -68,7 +70,7 @@ const CartSummary = () => {
               fontWeight: '800',
               color: '#FFFFFF'
             }}>
-              ${total.toFixed(2)}
+              {formatPrice(total)}
             </div>
           </div>
         </div>
@@ -162,7 +164,7 @@ const CartSummary = () => {
                     color: '#29BD98',
                     whiteSpace: 'nowrap'
                   }}>
-                    ${item.price.toFixed(2)}
+                    {formatPrice(item.localPrice || item.price)}
                   </div>
                 </motion.div>
               ))}
@@ -191,7 +193,7 @@ const CartSummary = () => {
                   fontWeight: '800',
                   color: '#29BD98'
                 }}>
-                  ${total.toFixed(2)}
+                  {formatPrice(total)}
                 </span>
               </div>
               <div style={{

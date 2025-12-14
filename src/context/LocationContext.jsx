@@ -5,6 +5,7 @@ import {
   getPaymentProvider,
   getLocalizedPrice 
 } from '../utils/geolocation';
+import { useCart } from './CartContext';
 
 const LocationContext = createContext();
 
@@ -43,8 +44,10 @@ export const LocationProvider = ({ children }) => {
       } catch (error) {
         console.error('Error initializing location:', error);
         // Set defaults
-        setCurrency({ code: 'USD', symbol: '$', name: 'US Dollar', paymentProvider: 'stripe' });
+        const defaultCurrency = { code: 'USD', symbol: '$', name: 'US Dollar', paymentProvider: 'stripe' };
+        setCurrency(defaultCurrency);
         setPaymentProvider('stripe');
+        setLocation({ country: 'US', countryName: 'United States' });
       } finally {
         setLoading(false);
       }
