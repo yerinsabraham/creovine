@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useCart } from '../../context/CartContext';
+import { useLocation } from '../../context/LocationContext';
 import { useIsMobile } from '../../hooks/useMediaQuery';
+import { getLocalizedPrice } from '../../utils/geolocation';
 
 /**
  * AssistedToggle Component
@@ -35,6 +37,7 @@ const AssistedToggle = ({
   theme = 'light' // 'light' or 'dark'
 }) => {
   const isMobile = useIsMobile();
+  const { location } = useLocation();
   
   // Determine which pattern is being used
   const isNewPattern = typeof enabled !== 'undefined' && typeof onToggle === 'function';
@@ -148,7 +151,10 @@ const AssistedToggle = ({
             fontWeight: '700',
             color: isAssisted ? '#FFFFFF' : '#29BD98'
           }}>
-            +${price}
+            {(() => {
+              const localPrice = getLocalizedPrice(price, location?.country || 'US');
+              return `+${localPrice.symbol}${localPrice.amount.toLocaleString()}`;
+            })()}
           </span>
         </motion.button>
       </div>

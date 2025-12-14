@@ -3,7 +3,8 @@ import {
   detectUserLocation, 
   getCurrencyConfig, 
   getPaymentProvider,
-  getLocalizedPrice 
+  getLocalizedPrice,
+  getExchangeRate
 } from '../utils/geolocation';
 import { useCart } from './CartContext';
 
@@ -26,6 +27,9 @@ export const LocationProvider = ({ children }) => {
   useEffect(() => {
     const initLocation = async () => {
       try {
+        // Initialize exchange rate first (runs in background)
+        getExchangeRate().catch(err => console.error('Exchange rate init failed:', err));
+        
         const userLocation = await detectUserLocation();
         const currencyConfig = getCurrencyConfig(userLocation.country);
         const provider = getPaymentProvider(userLocation.country);
@@ -53,15 +57,15 @@ export const LocationProvider = ({ children }) => {
       }
     };
 
-    // Check if we have cached location data (less than 24 hours old)
+    // Check if we have cached location data (less than 1 hour old to allow VPN changes)
     const cached = localStorage.getItem('userLocation');
     if (cached) {
       try {
         const { location: cachedLoc, currency: cachedCur, provider, timestamp } = JSON.parse(cached);
         const age = Date.now() - timestamp;
-        const oneDay = 24 * 60 * 60 * 1000;
+        const oneHour = 60 * 60 * 1000; // Changed from 24 hours to 1 hour
 
-        if (age < oneDay) {
+        if (age < oneHour) {
           // Use cached data
           setLocation(cachedLoc);
           setCurrency(cachedCur);

@@ -79,21 +79,72 @@ export const getCurrencyConfig = (countryCode) => {
 };
 
 /**
- * Convert USD price to NGN with discounted rounding
- * Nigeria gets approximately 15-20% discount with nice rounded numbers
+ * Get real-time USD to NGN exchange rate
+ * Falls back to 1550 if API fails
  */
-export const convertUSDtoNGN = (usdPrice) => {
-  // Current approximate rate: 1 USD = 1500 NGN (as of 2025)
-  // But we apply discount and round to nice numbers
-  const baseRate = 1500;
-  const discountRate = 0.80; // 20% discount
+let cachedRate = null;
+let lastRateFetch = null;
+
+export const getExchangeRate = async () => {
+  // Use cached rate if less than 1 hour old
+  if (cachedRate && lastRateFetch && (Date.now() - lastRateFetch < 3600000)) {
+    return cachedRate;
+  }
+
+  try {
+    // Using exchangerate-api.com (free tier: 1500 requests/month)
+    const response = await fetch('https://api.exchangerate-api.com/v4/latest/USD');
+    const data = await response.json();
+    
+    if (data.rates && data.rates.NGN) {
+      cachedRate = data.rates.NGN;
+      lastRateFetch = Date.now();
+      return cachedRate;
+    }
+  } catch (error) {
+    console.error('Exchange rate fetch failed:', error);
+  }
   
-  const convertedPrice = usdPrice * baseRate * discountRate;
+  // Fallback to approximate rate
+  return 1550; // Updated December 2025 approximate rate
+};
+
+/**
+ * Convert USD price to NGN using real exchange rate
+ * No discount - just straight conversion with smart rounding
+ */
+export const convertUSDtoNGN = async (usdPrice) => {
+  const rate = await getExchangeRate();
+  const convertedPrice = usdPrice * rate;
   
-  // Round to nearest 1000 for clean pricing
-  const roundedPrice = Math.round(convertedPrice / 1000) * 1000;
+  // Smart rounding based on amount
+  if (convertedPrice < 1000) {
+    return Math.round(convertedPrice / 10) * 10; // Round to nearest 10
+  } else if (convertedPrice < 10000) {
+    return Math.round(convertedPrice / 100) * 100; // Round to nearest 100
+  } else if (convertedPrice < 100000) {
+    return Math.round(convertedPrice / 1000) * 1000; // Round to nearest 1000
+  } else {
+    return Math.round(convertedPrice / 5000) * 5000; // Round to nearest 5000
+  }
+};
+
+/**
+ * Synchronous version using cached rate for immediate display
+ */
+export const convertUSDtoNGNSync = (usdPrice) => {
+  const rate = cachedRate || 1550;
+  const convertedPrice = usdPrice * rate;
   
-  return roundedPrice;
+  if (convertedPrice < 1000) {
+    return Math.round(convertedPrice / 10) * 10;
+  } else if (convertedPrice < 10000) {
+    return Math.round(convertedPrice / 100) * 100;
+  } else if (convertedPrice < 100000) {
+    return Math.round(convertedPrice / 1000) * 1000;
+  } else {
+    return Math.round(convertedPrice / 5000) * 5000;
+  }
 };
 
 /**
@@ -103,11 +154,12 @@ export const getLocalizedPrice = (usdPrice, countryCode) => {
   const currencyConfig = getCurrencyConfig(countryCode);
   
   if (currencyConfig.code === 'NGN') {
+    const ngnAmount = convertUSDtoNGNSync(usdPrice);
     return {
-      amount: convertUSDtoNGN(usdPrice),
+      amount: ngnAmount,
       currency: 'NGN',
       symbol: '₦',
-      formatted: `₦${convertUSDtoNGN(usdPrice).toLocaleString()}`
+      formatted: `₦${ngnAmount.toLocaleString()}`
     };
   }
   
