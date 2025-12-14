@@ -8,6 +8,7 @@ import { formatCurrency } from '../utils/pricingCalculator';
 import { collection, query, where, getDocs, doc, updateDoc, addDoc, serverTimestamp, onSnapshot } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import MessagesPanel from '../components/common/MessagesPanel';
+import logo from '../assets/logo.png';
 
 const UserDashboard = () => {
   const { currentUser, logout } = useAuth();
@@ -53,6 +54,7 @@ const UserDashboard = () => {
       const userProjects = [];
       querySnapshot.forEach((doc) => {
         const data = doc.data();
+        console.log('Fetched project:', doc.id, 'Status:', data.status, 'Data:', data);
         userProjects.push({ id: doc.id, ...data });
       });
       
@@ -62,6 +64,8 @@ const UserDashboard = () => {
         const dateB = b.submittedAt?.toDate?.() || b.createdAt?.toDate?.() || new Date(b.createdAt || 0);
         return dateB - dateA;
       });
+      
+      console.log('All projects with status:', userProjects.map(p => ({ id: p.id, status: p.status })));
       
       setProjects(userProjects);
       if (userProjects.length > 0 && !selectedProject) {
@@ -109,11 +113,30 @@ const UserDashboard = () => {
 
   const getProjectName = (project) => {
     // Try different possible locations for project name
-    return project.phases?.identity?.projectName || 
-           project.phases?.vision?.projectName || 
-           project.identity?.projectName ||
-           project.vision?.projectName ||
-           'Untitled Project';
+    const projectName = project.phases?.identity?.projectName || 
+                        project.phases?.vision?.projectName || 
+                        project.identity?.projectName ||
+                        project.vision?.projectName;
+    
+    if (projectName) {
+      return projectName;
+    }
+    
+    // If no project name, use service-friendly name based on what data exists
+    if (project.frontend) return 'Frontend Development';
+    if (project.backend) return 'Backend Development';
+    if (project.landingPage) return 'Landing Page';
+    if (project.design) return 'UI/UX Design';
+    if (project.contract) return 'Smart Contract';
+    if (project.bugfix) return 'Bug Fix';
+    if (project.api) return 'API Integration';
+    if (project.database) return 'Database Setup';
+    if (project.deployment) return 'Deployment Help';
+    if (project.refactor) return 'Code Refactoring';
+    if (project.websiteUpgrade) return 'Website Upgrade';
+    if (project.phases) return 'Full-Stack App';
+    
+    return 'Untitled Project';
   };
 
   const getProjectDescription = (project) => {
@@ -128,8 +151,86 @@ const UserDashboard = () => {
     setSelectedProject(project);
     
     // If draft, navigate to continue where they left off
-    if (project.status === 'draft' && project.currentPhase) {
-      navigate(`/onboarding/phase${project.currentPhase}`);
+    if (project.status === 'draft') {
+      console.log('Project data:', project); // Debug log
+      
+      // Check which service type and route accordingly
+      // Check for service-specific data that has actual content (not just empty objects)
+      if (project.frontend && Object.keys(project.frontend).length > 1) {
+        const step = project.frontend.currentStep || 1;
+        console.log('Navigating to frontend step:', step);
+        navigate(`/onboarding/frontend/step${step}`);
+        return;
+      }
+      
+      if (project.backend && Object.keys(project.backend).length > 1) {
+        const step = project.backend.currentStep || 1;
+        console.log('Navigating to backend step:', step);
+        navigate(`/onboarding/backend/step${step}`);
+        return;
+      }
+      
+      if (project.landingPage && Object.keys(project.landingPage).length > 1) {
+        const step = project.landingPage.currentStep || 1;
+        navigate(`/onboarding/landing-page/step${step}`);
+        return;
+      }
+      
+      if (project.design && Object.keys(project.design).length > 1) {
+        const step = project.design.currentStep || 1;
+        navigate(`/onboarding/design/step${step}`);
+        return;
+      }
+      
+      if (project.contract && Object.keys(project.contract).length > 1) {
+        const step = project.contract.currentStep || 1;
+        navigate(`/onboarding/smart-contract/step${step}`);
+        return;
+      }
+      
+      if (project.bugfix && Object.keys(project.bugfix).length > 1) {
+        const step = project.bugfix.currentStep || 1;
+        navigate(`/onboarding/bugfix/step${step}`);
+        return;
+      }
+      
+      if (project.api && Object.keys(project.api).length > 1) {
+        const step = project.api.currentStep || 1;
+        navigate(`/onboarding/api/step${step}`);
+        return;
+      }
+      
+      if (project.database && Object.keys(project.database).length > 1) {
+        const step = project.database.currentStep || 1;
+        navigate(`/onboarding/database/step${step}`);
+        return;
+      }
+      
+      if (project.deployment && Object.keys(project.deployment).length > 1) {
+        const step = project.deployment.currentStep || 1;
+        navigate(`/onboarding/deployment/step${step}`);
+        return;
+      }
+      
+      if (project.refactor && Object.keys(project.refactor).length > 1) {
+        const step = project.refactor.currentStep || 1;
+        navigate(`/onboarding/refactor/step${step}`);
+        return;
+      }
+      
+      if (project.websiteUpgrade && Object.keys(project.websiteUpgrade).length > 1) {
+        const step = project.websiteUpgrade.currentStep || 1;
+        navigate(`/onboarding/website-upgrade/step${step}`);
+        return;
+      }
+      
+      // Full-stack app with phases - only if no other service data exists
+      if (project.currentPhase || project.phases) {
+        const phase = project.currentPhase || 1;
+        console.log('Navigating to full-stack phase:', phase);
+        navigate(`/onboarding/phase${phase}`);
+        return;
+      }
     }
   };
 
@@ -146,44 +247,20 @@ const UserDashboard = () => {
   const canDeleteProject = (status) => {
     if (!status) return false;
     
-    // Allow deletion for: draft, submitted, payment-pending
+    // Allow deletion for: draft, submitted, payment-pending, pending (legacy)
     // Lock for: payment-confirmed, in-progress, review, completed
-    const deletableStatuses = ['draft', 'submitted', 'payment-pending'];
+    const deletableStatuses = ['draft', 'submitted', 'payment-pending', 'pending'];
     return deletableStatuses.includes(status);
   };
 
   // Delete project before payment is confirmed
-  const handleDeleteSubmittedProject = async () => {
-    const confirmed = window.confirm(
-      `Delete "${getProjectName(selectedProject)}"?\n\nThis project will be permanently removed. This action cannot be undone.`
-    );
-    
-    if (!confirmed) return;
-    
-    try {
-      // Create notification for admin
-      await addDoc(collection(db, 'adminNotifications'), {
-        type: 'project-deleted',
-        projectId: selectedProject.id,
-        projectName: getProjectName(selectedProject),
-        userId: currentUser.uid,
-        userEmail: currentUser.email,
-        userName: currentUser.displayName || currentUser.email,
-        status: selectedProject.status,
-        createdAt: serverTimestamp()
-      });
-
-      // Delete the project
-      await deleteProject(selectedProject.id);
-      
-      // Refresh projects
-      await fetchUserProjects();
-      
-      alert('Project deleted successfully.');
-    } catch (error) {
-      console.error('Error deleting project:', error);
-      alert('Failed to delete project. Please try again.');
-    }
+  const handleDeleteSubmittedProject = () => {
+    setProjectToDelete({ 
+      id: selectedProject.id, 
+      name: getProjectName(selectedProject), 
+      status: selectedProject.status 
+    });
+    setShowDeleteModal(true);
   };
 
   const handleDeleteProject = (projectId, projectName) => {
@@ -198,6 +275,16 @@ const UserDashboard = () => {
     try {
       // Create notification for admin if not a draft
       const project = projects.find(p => p.id === projectToDelete.id);
+      
+      console.log('Attempting to delete project:', {
+        projectId: projectToDelete.id,
+        projectName: projectToDelete.name,
+        status: project?.status,
+        userId: project?.userId,
+        currentUserId: currentUser.uid,
+        userMatch: project?.userId === currentUser.uid
+      });
+      
       if (project && project.status !== 'draft') {
         await addDoc(collection(db, 'adminNotifications'), {
           type: 'project-deleted',
@@ -274,13 +361,28 @@ const UserDashboard = () => {
           justifyContent: 'space-between',
           alignItems: 'center'
         }}>
-          <h1 style={{
-            fontSize: isMobile ? '20px' : '24px',
-            fontWeight: '700',
-            color: '#FFFFFF'
-          }}>
-            My Dashboard
-          </h1>
+          {/* Logo - Desktop */}
+          {!isMobile ? (
+            <motion.img
+              src={logo}
+              alt="Creovine"
+              onClick={() => navigate('/')}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              style={{
+                height: '36px',
+                cursor: 'pointer'
+              }}
+            />
+          ) : (
+            <h1 style={{
+              fontSize: '20px',
+              fontWeight: '700',
+              color: '#FFFFFF'
+            }}>
+              My Dashboard
+            </h1>
+          )}
           
           {/* Desktop Menu */}
           {!isMobile && (
@@ -408,6 +510,48 @@ const UserDashboard = () => {
                       marginTop: '8px'
                     }}
                   >
+                    {/* Logo with Home Link */}
+                    <motion.div
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => {
+                        navigate('/');
+                        setShowMobileMenu(false);
+                      }}
+                      style={{
+                        padding: '16px',
+                        borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+                        marginBottom: '8px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '12px'
+                      }}
+                    >
+                      <img
+                        src={logo}
+                        alt="Creovine"
+                        style={{
+                          height: '32px'
+                        }}
+                      />
+                      <div>
+                        <div style={{
+                          fontSize: '16px',
+                          fontWeight: '700',
+                          color: '#FFFFFF',
+                          marginBottom: '2px'
+                        }}>
+                          Creovine
+                        </div>
+                        <div style={{
+                          fontSize: '11px',
+                          color: 'rgba(255, 255, 255, 0.5)'
+                        }}>
+                          Go to homepage
+                        </div>
+                      </div>
+                    </motion.div>
+
                     {/* User Info */}
                     <div style={{
                       padding: '12px 16px',
@@ -593,12 +737,9 @@ const UserDashboard = () => {
                       transition: 'all 0.2s ease'
                     }}
                   >
+                    {console.log('Rendering project:', project.id, 'Status:', project.status, 'Can delete:', canDeleteProject(project.status))}
                     {/* Delete button for all deletable projects */}
-                    {(() => {
-                      const canDelete = canDeleteProject(project.status);
-                      console.log('Project:', getProjectName(project), 'Status:', project.status, 'Can Delete:', canDelete);
-                      return canDelete;
-                    })() && (
+                    {canDeleteProject(project.status) && (
                       <motion.button
                         whileHover={{ scale: 1.15 }}
                         whileTap={{ scale: 0.9 }}
@@ -1139,7 +1280,15 @@ const UserDashboard = () => {
                           fontSize: '14px',
                           color: '#FFFFFF'
                         }}>
-                          {new Date(selectedProject.createdAt?.toDate?.() || selectedProject.createdAt).toLocaleDateString()}
+                          {(() => {
+                            try {
+                              const date = selectedProject.createdAt?.toDate?.() || selectedProject.createdAt || selectedProject.updatedAt?.toDate?.() || selectedProject.updatedAt;
+                              const dateObj = new Date(date);
+                              return isNaN(dateObj.getTime()) ? 'Recently' : dateObj.toLocaleDateString();
+                            } catch {
+                              return 'Recently';
+                            }
+                          })()}
                         </div>
                       </div>
                       
@@ -1184,11 +1333,12 @@ const UserDashboard = () => {
             left: 0,
             right: 0,
             bottom: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.7)',
+            backgroundColor: 'rgba(0, 0, 0, 0.85)',
+            backdropFilter: 'blur(8px)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            zIndex: 10000,
+            zIndex: 999999,
             padding: '20px'
           }}
         >

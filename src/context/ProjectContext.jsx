@@ -158,20 +158,43 @@ export const ProjectProvider = ({ children }) => {
 
     setProjectData(updatedProjectData);
 
-    // Filter out metadata fields (primaryService, addOns, etc.) from phases
-    const { primaryService, addOns, serviceCategory, serviceName, completedServices, currentServiceIndex, ...phasesOnly } = updatedProjectData;
+    // Determine if this is a full-stack phase or a service-specific phase
+    const serviceTypes = ['frontend', 'backend', 'landingPage', 'design', 'contract', 'bugfix', 'api', 'database', 'deployment', 'refactor', 'websiteUpgrade'];
+    const isService = serviceTypes.includes(phase);
 
     // Save to Firestore
     const projectRef = doc(db, 'projects', `${currentUser.uid}_draft`);
-    await setDoc(projectRef, {
-      userId: currentUser.uid,
-      userEmail: currentUser.email,
-      userName: currentUser.displayName || currentUser.email,
-      phases: phasesOnly,
-      currentPhase,
-      status: 'draft',
-      updatedAt: serverTimestamp()
-    }, { merge: true });
+    
+    // Check if this is a new project (to set createdAt)
+    const projectSnapshot = await getDoc(projectRef);
+    const isNewProject = !projectSnapshot.exists();
+    
+    if (isService) {
+      // Save service-specific data at root level, not in phases
+      await setDoc(projectRef, {
+        userId: currentUser.uid,
+        userEmail: currentUser.email,
+        userName: currentUser.displayName || currentUser.email,
+        [phase]: updatedData, // Save directly, e.g., { frontend: {...} }
+        status: 'draft',
+        ...(isNewProject && { createdAt: serverTimestamp() }), // Only set on first save
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+    } else {
+      // Full-stack app phases - save in phases object
+      const { primaryService, addOns, serviceCategory, serviceName, completedServices, currentServiceIndex, ...phasesOnly } = updatedProjectData;
+      
+      await setDoc(projectRef, {
+        userId: currentUser.uid,
+        userEmail: currentUser.email,
+        userName: currentUser.displayName || currentUser.email,
+        phases: phasesOnly,
+        currentPhase,
+        status: 'draft',
+        ...(isNewProject && { createdAt: serverTimestamp() }), // Only set on first save
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+    }
   };
 
   // Navigate to phase
@@ -273,9 +296,6 @@ export const ProjectProvider = ({ children }) => {
 
     const dataToSubmit = finalData || projectData;
     
-    // Filter out metadata fields from phases
-    const { primaryService, addOns, serviceCategory, serviceName, completedServices, currentServiceIndex, ...phasesOnly } = dataToSubmit;
-
     // Update the existing draft project to submitted status instead of creating new one
     const draftProjectId = `${currentUser.uid}_draft`;
     const submittedProjectId = `${currentUser.uid}_submitted_${Date.now()}`;
@@ -283,28 +303,49 @@ export const ProjectProvider = ({ children }) => {
     const submittedRef = doc(db, 'projects', submittedProjectId);
     
     try {
-      // Get the draft document to preserve createdAt
+      // Get the draft document to preserve all data including service-specific fields
       const draftSnap = await getDoc(draftRef);
       const draftData = draftSnap.exists() ? draftSnap.data() : {};
       
-      // Build submission data - only include defined fields
+      // Determine if this is a service-specific project or full-stack
+      const serviceTypes = ['frontend', 'backend', 'landingPage', 'design', 'contract', 'bugfix', 'api', 'database', 'deployment', 'refactor', 'websiteUpgrade'];
+      const hasServiceData = serviceTypes.some(service => draftData[service] && Object.keys(draftData[service]).length > 0);
+      const isFullStack = draftData.phases && Object.keys(draftData.phases).length > 0;
+      
+      // Build submission data based on project type
       const submissionData = {
         userId: currentUser.uid,
         userEmail: currentUser.email,
         userName: currentUser.displayName || currentUser.email,
-        phases: phasesOnly,
         status: 'submitted',
         createdAt: draftData.createdAt || serverTimestamp(),
         submittedAt: serverTimestamp()
       };
 
-      // Only add metadata if it exists
-      if (primaryService) submissionData.primaryService = primaryService;
-      if (addOns && addOns.length > 0) submissionData.addOns = addOns;
-      if (serviceCategory) submissionData.serviceCategory = serviceCategory;
-      if (serviceName) submissionData.serviceName = serviceName;
-      if (completedServices && completedServices.length > 0) submissionData.completedServices = completedServices;
-      if (typeof currentServiceIndex === 'number') submissionData.currentServiceIndex = currentServiceIndex;
+      // Copy service-specific data if it exists
+      if (hasServiceData) {
+        serviceTypes.forEach(service => {
+          if (draftData[service]) {
+            submissionData[service] = draftData[service];
+          }
+        });
+      }
+      
+      // Copy full-stack phases if it exists
+      if (isFullStack) {
+        submissionData.phases = draftData.phases;
+        if (draftData.currentPhase) {
+          submissionData.currentPhase = draftData.currentPhase;
+        }
+      }
+
+      // Add metadata if it exists
+      if (draftData.primaryService) submissionData.primaryService = draftData.primaryService;
+      if (draftData.addOns) submissionData.addOns = draftData.addOns;
+      if (draftData.serviceCategory) submissionData.serviceCategory = draftData.serviceCategory;
+      if (draftData.serviceName) submissionData.serviceName = draftData.serviceName;
+      if (draftData.completedServices) submissionData.completedServices = draftData.completedServices;
+      if (typeof draftData.currentServiceIndex === 'number') submissionData.currentServiceIndex = draftData.currentServiceIndex;
       
       // Create submitted project
       await setDoc(submittedRef, submissionData);

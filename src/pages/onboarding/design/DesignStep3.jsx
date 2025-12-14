@@ -4,19 +4,23 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext';
 import { useProject } from '../../../context/ProjectContext';
 import { useCart } from '../../../context/CartContext';
+import { useLocation } from '../../../context/LocationContext';
 import { useIsMobile } from '../../../hooks/useMediaQuery';
 import { useMultiServiceComplete, useIsMultiService } from '../../../hooks/useMultiService';
 import AssistedToggle from '../../../components/common/AssistedToggle';
 import CartSummary from '../../../components/common/CartSummary';
 import ChipGroup from '../../../components/common/ChipGroup';
 import TimelineSelector from '../../../components/common/TimelineSelector';
+import ProjectEstimateModal from '../../../components/common/ProjectEstimateModal';
+import { calculateProjectEstimate } from '../../../utils/pricingCalculator';
 import logo from '../../../assets/logo.png';
 
 const DesignStep3 = () => {
   const navigate = useNavigate();
   const { currentUser, logout } = useAuth();
   const { projectData, updatePhaseData, submitProject } = useProject();
-  const { hasItem } = useCart();
+  const { hasItem, cart } = useCart();
+  const { location } = useLocation();
   const isMobile = useIsMobile();
   const handleMultiServiceComplete = useMultiServiceComplete('design');
   const isMultiService = useIsMultiService();
@@ -37,6 +41,8 @@ const DesignStep3 = () => {
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showEstimateModal, setShowEstimateModal] = useState(false);
+  const [estimate, setEstimate] = useState(null);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -55,7 +61,28 @@ const DesignStep3 = () => {
       if (isMultiService) {
         await handleMultiServiceComplete(serviceData);
       } else {
-        navigate('/quote');
+        // Calculate estimate for single-service mode
+        const countryCode = location?.country || 'US';
+        const timelineMultiplier = formData.timelineMultiplier || 1.0;
+        const calculatedEstimate = calculateProjectEstimate(
+          projectData,
+          countryCode,
+          timelineMultiplier,
+          cart
+        );
+        setEstimate(calculatedEstimate);
+        
+        // Submit project
+        await submitProject();
+        
+        // Block back button
+        window.history.pushState(null, '', window.location.href);
+        window.onpopstate = function() {
+          window.history.pushState(null, '', window.location.href);
+        };
+        
+        // Show estimate modal
+        setShowEstimateModal(true);
       }
     } catch (error) {
       console.error('Submit error:', error);
@@ -508,6 +535,16 @@ const DesignStep3 = () => {
       </div>
 
       <CartSummary />
+
+      <ProjectEstimateModal
+        isOpen={showEstimateModal}
+        onClose={() => {
+          setShowEstimateModal(false);
+          navigate('/dashboard');
+        }}
+        estimate={estimate}
+        projectData={projectData}
+      />
     </div>
   );
 };

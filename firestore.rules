@@ -19,8 +19,8 @@ service cloud.firestore {
     
     // Projects collection
     match /projects/{projectId} {
-      // Admin can read all projects
-      allow read: if isAdmin();
+      // Admin has full access
+      allow read, write, delete: if isAdmin();
       
       // Users can read their own projects (including non-existent docs for draft creation)
       // Check if projectId contains user's UID (e.g., userId_draft pattern)
@@ -37,14 +37,15 @@ service cloud.firestore {
                        (request.resource.data.userId == request.auth.uid ||
                         (resource != null && resource.data.userId == request.auth.uid));
       
-      // Admin can update any project (for status changes)
-      allow update: if isAdmin();
-      
-      // Users can delete their own draft projects
+      // Users can delete their own projects before payment confirmation
+      // Allowed statuses: draft, submitted, payment-pending, pending (legacy)
       allow delete: if isAuthenticated() && 
                        resource != null &&
                        resource.data.userId == request.auth.uid &&
-                       resource.data.status == 'draft';
+                       (resource.data.status == 'draft' || 
+                        resource.data.status == 'submitted' || 
+                        resource.data.status == 'payment-pending' ||
+                        resource.data.status == 'pending');
     }
     
     // Users collection

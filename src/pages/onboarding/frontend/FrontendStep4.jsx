@@ -5,17 +5,21 @@ import { useAuth } from '../../../context/AuthContext';
 import { useProject } from '../../../context/ProjectContext';
 import { useCart } from '../../../context/CartContext';
 import { useIsMobile } from '../../../hooks/useMediaQuery';
+import { useLocation } from '../../../context/LocationContext';
 import { useMultiServiceComplete, useIsMultiService } from '../../../hooks/useMultiService';
 import AssistedToggle from '../../../components/common/AssistedToggle';
 import CartSummary from '../../../components/common/CartSummary';
 import TimelineSelector from '../../../components/common/TimelineSelector';
+import ProjectEstimateModal from '../../../components/common/ProjectEstimateModal';
+import { calculateProjectEstimate } from '../../../utils/pricingCalculator';
 import logo from '../../../assets/logo.png';
 
 const FrontendStep4 = () => {
   const navigate = useNavigate();
   const { currentUser, logout } = useAuth();
   const { projectData, updatePhaseData, submitProject } = useProject();
-  const { hasItem } = useCart();
+  const { hasItem, cart } = useCart();
+  const { location } = useLocation();
   const isMobile = useIsMobile();
   const handleMultiServiceComplete = useMultiServiceComplete('frontend');
   const isMultiService = useIsMultiService();
@@ -29,6 +33,8 @@ const FrontendStep4 = () => {
   });
 
   const [submitting, setSubmitting] = useState(false);
+  const [showEstimateModal, setShowEstimateModal] = useState(false);
+  const [estimate, setEstimate] = useState(null);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -38,9 +44,16 @@ const FrontendStep4 = () => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
+  const handleSaveAndExit = async () => {
+    await updatePhaseData('frontend', { ...projectData.frontend, ...formData, currentStep: 4 });
+    navigate('/dashboard');
+  };
+
   const handleSubmit = async () => {
     try {
       setSubmitting(true);
+      
+      // Save the final phase data
       const serviceData = { ...projectData.frontend, ...formData };
       await updatePhaseData('frontend', serviceData);
       
@@ -48,12 +61,27 @@ const FrontendStep4 = () => {
         // Multi-service mode: mark complete and navigate to next service or summary
         await handleMultiServiceComplete(serviceData);
       } else {
-        // Single service mode: go to exciting submitted page
-        navigate('/project-submitted');
+        // Single service mode: Calculate estimate and submit
+        const countryCode = location?.country || 'US';
+        const timelineMultiplier = formData.timelineMultiplier || 1.0;
+        const calculatedEstimate = calculateProjectEstimate(projectData, countryCode, timelineMultiplier, cart);
+        setEstimate(calculatedEstimate);
+        
+        // Submit project to Firestore
+        await submitProject();
+        
+        // Block browser back button to prevent resubmission
+        window.history.pushState(null, '', window.location.href);
+        window.onpopstate = function() {
+          window.history.pushState(null, '', window.location.href);
+        };
+        
+        // Show the estimate modal
+        setShowEstimateModal(true);
       }
     } catch (error) {
       console.error('Submission error:', error);
-      alert('Error submitting project. Please try again.');
+      alert('Error submitting project. Please try again. Error: ' + error.message);
     } finally {
       setSubmitting(false);
     }
@@ -370,9 +398,10 @@ const FrontendStep4 = () => {
             {/* Navigation */}
             <div style={{
               display: 'flex',
-              gap: '16px',
+              gap: '12px',
               marginTop: '48px',
-              justifyContent: 'space-between'
+              justifyContent: 'space-between',
+              flexWrap: 'wrap'
             }}>
               <button
                 onClick={handleBack}
@@ -390,33 +419,64 @@ const FrontendStep4 = () => {
                 Back
               </button>
 
-              <motion.button
-                whileHover={{ scale: isFormValid ? 1.02 : 1 }}
-                whileTap={{ scale: isFormValid ? 0.98 : 1 }}
-                onClick={handleSubmit}
-                disabled={!isFormValid || submitting}
-                style={{
-                  padding: isMobile ? '14px 32px' : '16px 48px',
-                  fontSize: isMobile ? '15px' : '16px',
-                  fontWeight: '700',
-                  color: '#FFFFFF',
-                  background: isFormValid && !submitting
-                    ? 'linear-gradient(135deg, #29BD98 0%, #2497F9 100%)'
-                    : 'rgba(255, 255, 255, 0.1)',
-                  border: 'none',
-                  borderRadius: '16px',
-                  cursor: isFormValid && !submitting ? 'pointer' : 'not-allowed',
-                  opacity: isFormValid && !submitting ? 1 : 0.5
-                }}
-              >
-                {submitting ? 'Submitting...' : 'Submit Project'}
-              </motion.button>
+              <div style={{ display: 'flex', gap: '12px', flex: 1, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={handleSaveAndExit}
+                  style={{
+                    padding: isMobile ? '14px 24px' : '16px 32px',
+                    fontSize: isMobile ? '15px' : '16px',
+                    fontWeight: '600',
+                    color: '#FFFFFF',
+                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                    border: '2px solid rgba(255, 255, 255, 0.3)',
+                    borderRadius: '16px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Save & Exit
+                </motion.button>
+
+                <motion.button
+                  whileHover={{ scale: isFormValid ? 1.02 : 1 }}
+                  whileTap={{ scale: isFormValid ? 0.98 : 1 }}
+                  onClick={handleSubmit}
+                  disabled={!isFormValid || submitting}
+                  style={{
+                    padding: isMobile ? '14px 32px' : '16px 48px',
+                    fontSize: isMobile ? '15px' : '16px',
+                    fontWeight: '700',
+                    color: '#FFFFFF',
+                    background: isFormValid && !submitting
+                      ? 'linear-gradient(135deg, #29BD98 0%, #2497F9 100%)'
+                      : 'rgba(255, 255, 255, 0.1)',
+                    border: 'none',
+                    borderRadius: '16px',
+                    cursor: isFormValid && !submitting ? 'pointer' : 'not-allowed',
+                    opacity: isFormValid && !submitting ? 1 : 0.5
+                  }}
+                >
+                  {submitting ? 'Submitting...' : 'Submit Project'}
+                </motion.button>
+              </div>
             </div>
           </div>
         </motion.div>
       </div>
 
       <CartSummary />
+
+      {/* Estimate Modal */}
+      <ProjectEstimateModal
+        isOpen={showEstimateModal}
+        onClose={() => {
+          setShowEstimateModal(false);
+          navigate('/dashboard');
+        }}
+        estimate={estimate}
+        projectData={projectData}
+      />
     </div>
   );
 };

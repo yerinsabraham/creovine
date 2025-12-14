@@ -33,6 +33,11 @@ const FrontendStep2 = () => {
     authComponents: hasAuthentication ? ['Login', 'Signup', 'Password Reset'] : []
   });
 
+  const [showCustomPageInput, setShowCustomPageInput] = useState(false);
+  const [customPageValue, setCustomPageValue] = useState('');
+  const [showCustomComponentInput, setShowCustomComponentInput] = useState(false);
+  const [customComponentValue, setCustomComponentValue] = useState('');
+
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
@@ -48,6 +53,40 @@ const FrontendStep2 = () => {
         ? prev[field].filter(i => i !== item)
         : [...prev[field], item]
     }));
+  };
+
+  const addCustomPage = () => {
+    if (customPageValue.trim()) {
+      setFormData(prev => ({
+        ...prev,
+        pages: [...prev.pages, customPageValue.trim()]
+      }));
+      setCustomPageValue('');
+      setShowCustomPageInput(false);
+    }
+  };
+
+  const addCustomComponent = () => {
+    if (customComponentValue.trim()) {
+      setFormData(prev => ({
+        ...prev,
+        components: [...prev.components, customComponentValue.trim()]
+      }));
+      setCustomComponentValue('');
+      setShowCustomComponentInput(false);
+    }
+  };
+
+  const removeCustomItem = (field, item) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: prev[field].filter(i => i !== item)
+    }));
+  };
+
+  const handleSaveAndExit = async () => {
+    await updatePhaseData('frontend', { ...projectData.frontend, ...formData, currentStep: 2 });
+    navigate('/dashboard');
   };
 
   const handleContinue = async () => {
@@ -281,11 +320,185 @@ const FrontendStep2 = () => {
                   }}>
                     What pages/screens do you need? *
                   </label>
-                  <ChipGroup
-                    options={pageOptions}
-                    selected={formData.pages}
-                    onToggle={(item) => toggleItem('pages', item)}
-                  />
+                  <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                    {pageOptions.map(page => (
+                      <motion.button
+                        key={page}
+                        onClick={() => toggleItem('pages', page)}
+                        whileHover={{ scale: 1.03 }}
+                        whileTap={{ scale: 0.97 }}
+                        style={{
+                          padding: isMobile ? '10px 16px' : '12px 20px',
+                          fontSize: isMobile ? '13px' : '14px',
+                          fontWeight: '600',
+                          color: formData.pages.includes(page) ? '#FFFFFF' : 'rgba(255, 255, 255, 0.7)',
+                          backgroundColor: formData.pages.includes(page) 
+                            ? 'rgba(36, 151, 249, 0.2)' 
+                            : 'rgba(255, 255, 255, 0.05)',
+                          border: formData.pages.includes(page) 
+                            ? '2px solid #2497F9' 
+                            : '2px solid rgba(255, 255, 255, 0.1)',
+                          borderRadius: '50px',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s ease',
+                          whiteSpace: 'nowrap'
+                        }}
+                      >
+                        {formData.pages.includes(page) && '✓ '}{page}
+                      </motion.button>
+                    ))}
+
+                    {/* Add Custom Page Button */}
+                    {!showCustomPageInput && (
+                      <motion.button
+                        onClick={() => setShowCustomPageInput(true)}
+                        whileHover={{ scale: 1.03 }}
+                        whileTap={{ scale: 0.97 }}
+                        style={{
+                          padding: isMobile ? '10px 16px' : '12px 20px',
+                          fontSize: isMobile ? '13px' : '14px',
+                          fontWeight: '600',
+                          color: 'rgba(41, 189, 152, 0.9)',
+                          backgroundColor: 'rgba(41, 189, 152, 0.1)',
+                          border: '2px dashed rgba(41, 189, 152, 0.4)',
+                          borderRadius: '50px',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s ease',
+                          whiteSpace: 'nowrap'
+                        }}
+                      >
+                        + Add Custom Page
+                      </motion.button>
+                    )}
+                  </div>
+
+                  {/* Custom Page Input */}
+                  {showCustomPageInput && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      style={{
+                        marginTop: '12px',
+                        display: 'flex',
+                        gap: '8px',
+                        alignItems: 'center'
+                      }}
+                    >
+                      <input
+                        type="text"
+                        value={customPageValue}
+                        onChange={(e) => setCustomPageValue(e.target.value)}
+                        onKeyPress={(e) => e.key === 'Enter' && addCustomPage()}
+                        placeholder="Enter custom page name..."
+                        autoFocus
+                        style={{
+                          flex: 1,
+                          padding: '12px 16px',
+                          fontSize: '14px',
+                          color: '#FFFFFF',
+                          backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                          border: '2px solid rgba(41, 189, 152, 0.4)',
+                          borderRadius: '12px',
+                          outline: 'none'
+                        }}
+                      />
+                      <motion.button
+                        onClick={addCustomPage}
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        style={{
+                          padding: '12px 20px',
+                          fontSize: '14px',
+                          fontWeight: '600',
+                          color: '#FFFFFF',
+                          backgroundColor: '#29BD98',
+                          border: 'none',
+                          borderRadius: '12px',
+                          cursor: 'pointer',
+                          whiteSpace: 'nowrap'
+                        }}
+                      >
+                        Add
+                      </motion.button>
+                      <motion.button
+                        onClick={() => {
+                          setShowCustomPageInput(false);
+                          setCustomPageValue('');
+                        }}
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        style={{
+                          padding: '12px 20px',
+                          fontSize: '14px',
+                          fontWeight: '600',
+                          color: 'rgba(255, 255, 255, 0.7)',
+                          backgroundColor: 'transparent',
+                          border: '2px solid rgba(255, 255, 255, 0.2)',
+                          borderRadius: '12px',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Cancel
+                      </motion.button>
+                    </motion.div>
+                  )}
+
+                  {/* Show custom pages that were added */}
+                  {formData.pages.filter(p => !pageOptions.includes(p)).length > 0 && (
+                    <div style={{ marginTop: '12px' }}>
+                      <div style={{
+                        fontSize: '12px',
+                        fontWeight: '600',
+                        color: 'rgba(255, 255, 255, 0.5)',
+                        marginBottom: '8px'
+                      }}>
+                        Custom Pages:
+                      </div>
+                      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                        {formData.pages.filter(p => !pageOptions.includes(p)).map(page => (
+                          <motion.div
+                            key={page}
+                            initial={{ opacity: 0, scale: 0.8 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '8px',
+                              padding: '8px 14px',
+                              fontSize: '13px',
+                              fontWeight: '600',
+                              color: '#FFFFFF',
+                              backgroundColor: 'rgba(41, 189, 152, 0.2)',
+                              border: '2px solid #29BD98',
+                              borderRadius: '50px'
+                            }}
+                          >
+                            ✓ {page}
+                            <button
+                              onClick={() => removeCustomItem('pages', page)}
+                              style={{
+                                marginLeft: '4px',
+                                padding: '0',
+                                width: '16px',
+                                height: '16px',
+                                fontSize: '12px',
+                                color: '#FFFFFF',
+                                backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                                border: 'none',
+                                borderRadius: '50%',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center'
+                              }}
+                            >
+                              ×
+                            </button>
+                          </motion.div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div style={{ marginBottom: '32px' }}>
@@ -298,11 +511,185 @@ const FrontendStep2 = () => {
                   }}>
                     What components do you need? *
                   </label>
-                  <ChipGroup
-                    options={componentOptions}
-                    selected={formData.components}
-                    onToggle={(item) => toggleItem('components', item)}
-                  />
+                  <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                    {componentOptions.map(component => (
+                      <motion.button
+                        key={component}
+                        onClick={() => toggleItem('components', component)}
+                        whileHover={{ scale: 1.03 }}
+                        whileTap={{ scale: 0.97 }}
+                        style={{
+                          padding: isMobile ? '10px 16px' : '12px 20px',
+                          fontSize: isMobile ? '13px' : '14px',
+                          fontWeight: '600',
+                          color: formData.components.includes(component) ? '#FFFFFF' : 'rgba(255, 255, 255, 0.7)',
+                          backgroundColor: formData.components.includes(component) 
+                            ? 'rgba(36, 151, 249, 0.2)' 
+                            : 'rgba(255, 255, 255, 0.05)',
+                          border: formData.components.includes(component) 
+                            ? '2px solid #2497F9' 
+                            : '2px solid rgba(255, 255, 255, 0.1)',
+                          borderRadius: '50px',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s ease',
+                          whiteSpace: 'nowrap'
+                        }}
+                      >
+                        {formData.components.includes(component) && '✓ '}{component}
+                      </motion.button>
+                    ))}
+
+                    {/* Add Custom Component Button */}
+                    {!showCustomComponentInput && (
+                      <motion.button
+                        onClick={() => setShowCustomComponentInput(true)}
+                        whileHover={{ scale: 1.03 }}
+                        whileTap={{ scale: 0.97 }}
+                        style={{
+                          padding: isMobile ? '10px 16px' : '12px 20px',
+                          fontSize: isMobile ? '13px' : '14px',
+                          fontWeight: '600',
+                          color: 'rgba(41, 189, 152, 0.9)',
+                          backgroundColor: 'rgba(41, 189, 152, 0.1)',
+                          border: '2px dashed rgba(41, 189, 152, 0.4)',
+                          borderRadius: '50px',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s ease',
+                          whiteSpace: 'nowrap'
+                        }}
+                      >
+                        + Add Custom Component
+                      </motion.button>
+                    )}
+                  </div>
+
+                  {/* Custom Component Input */}
+                  {showCustomComponentInput && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      style={{
+                        marginTop: '12px',
+                        display: 'flex',
+                        gap: '8px',
+                        alignItems: 'center'
+                      }}
+                    >
+                      <input
+                        type="text"
+                        value={customComponentValue}
+                        onChange={(e) => setCustomComponentValue(e.target.value)}
+                        onKeyPress={(e) => e.key === 'Enter' && addCustomComponent()}
+                        placeholder="Enter custom component name..."
+                        autoFocus
+                        style={{
+                          flex: 1,
+                          padding: '12px 16px',
+                          fontSize: '14px',
+                          color: '#FFFFFF',
+                          backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                          border: '2px solid rgba(41, 189, 152, 0.4)',
+                          borderRadius: '12px',
+                          outline: 'none'
+                        }}
+                      />
+                      <motion.button
+                        onClick={addCustomComponent}
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        style={{
+                          padding: '12px 20px',
+                          fontSize: '14px',
+                          fontWeight: '600',
+                          color: '#FFFFFF',
+                          backgroundColor: '#29BD98',
+                          border: 'none',
+                          borderRadius: '12px',
+                          cursor: 'pointer',
+                          whiteSpace: 'nowrap'
+                        }}
+                      >
+                        Add
+                      </motion.button>
+                      <motion.button
+                        onClick={() => {
+                          setShowCustomComponentInput(false);
+                          setCustomComponentValue('');
+                        }}
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        style={{
+                          padding: '12px 20px',
+                          fontSize: '14px',
+                          fontWeight: '600',
+                          color: 'rgba(255, 255, 255, 0.7)',
+                          backgroundColor: 'transparent',
+                          border: '2px solid rgba(255, 255, 255, 0.2)',
+                          borderRadius: '12px',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Cancel
+                      </motion.button>
+                    </motion.div>
+                  )}
+
+                  {/* Show custom components that were added */}
+                  {formData.components.filter(c => !componentOptions.includes(c)).length > 0 && (
+                    <div style={{ marginTop: '12px' }}>
+                      <div style={{
+                        fontSize: '12px',
+                        fontWeight: '600',
+                        color: 'rgba(255, 255, 255, 0.5)',
+                        marginBottom: '8px'
+                      }}>
+                        Custom Components:
+                      </div>
+                      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                        {formData.components.filter(c => !componentOptions.includes(c)).map(component => (
+                          <motion.div
+                            key={component}
+                            initial={{ opacity: 0, scale: 0.8 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '8px',
+                              padding: '8px 14px',
+                              fontSize: '13px',
+                              fontWeight: '600',
+                              color: '#FFFFFF',
+                              backgroundColor: 'rgba(41, 189, 152, 0.2)',
+                              border: '2px solid #29BD98',
+                              borderRadius: '50px'
+                            }}
+                          >
+                            ✓ {component}
+                            <button
+                              onClick={() => removeCustomItem('components', component)}
+                              style={{
+                                marginLeft: '4px',
+                                padding: '0',
+                                width: '16px',
+                                height: '16px',
+                                fontSize: '12px',
+                                color: '#FFFFFF',
+                                backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                                border: 'none',
+                                borderRadius: '50%',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center'
+                              }}
+                            >
+                              ×
+                            </button>
+                          </motion.div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </>
             )}
@@ -320,12 +707,35 @@ const FrontendStep2 = () => {
               </label>
               <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
                 {responsiveOptions.map(option => (
-                  <Chip
+                  <motion.button
                     key={option.id}
-                    label={`${option.icon} ${option.label}`}
-                    selected={formData.responsive.includes(option.id)}
                     onClick={() => toggleItem('responsive', option.id)}
-                  />
+                    whileHover={{ scale: 1.03 }}
+                    whileTap={{ scale: 0.97 }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      padding: isMobile ? '12px 20px' : '14px 24px',
+                      fontSize: isMobile ? '14px' : '15px',
+                      fontWeight: '600',
+                      color: formData.responsive.includes(option.id) ? '#FFFFFF' : 'rgba(255, 255, 255, 0.7)',
+                      backgroundColor: formData.responsive.includes(option.id) 
+                        ? 'rgba(36, 151, 249, 0.2)' 
+                        : 'rgba(255, 255, 255, 0.05)',
+                      border: formData.responsive.includes(option.id) 
+                        ? '2px solid #2497F9' 
+                        : '2px solid rgba(255, 255, 255, 0.1)',
+                      borderRadius: '50px',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                      whiteSpace: 'nowrap'
+                    }}
+                  >
+                    <span style={{ fontSize: '20px' }}>{option.icon}</span>
+                    <span>{option.label}</span>
+                    {formData.responsive.includes(option.id) && <span style={{ marginLeft: '4px' }}>✓</span>}
+                  </motion.button>
                 ))}
               </div>
             </div>
@@ -444,9 +854,10 @@ const FrontendStep2 = () => {
             {/* Navigation */}
             <div style={{
               display: 'flex',
-              gap: '16px',
+              gap: isMobile ? '12px' : '16px',
               marginTop: '48px',
-              justifyContent: 'space-between'
+              justifyContent: 'space-between',
+              flexWrap: isMobile ? 'wrap' : 'nowrap'
             }}>
               <button
                 onClick={handleBack}
@@ -464,27 +875,55 @@ const FrontendStep2 = () => {
                 Back
               </button>
 
-              <motion.button
-                whileHover={{ scale: isFormValid ? 1.02 : 1 }}
-                whileTap={{ scale: isFormValid ? 0.98 : 1 }}
-                onClick={handleContinue}
-                disabled={!isFormValid}
-                style={{
-                  padding: isMobile ? '14px 32px' : '16px 48px',
-                  fontSize: isMobile ? '15px' : '16px',
-                  fontWeight: '700',
-                  color: '#FFFFFF',
-                  background: isFormValid
-                    ? 'linear-gradient(135deg, #2497F9 0%, #29BD98 100%)'
-                    : 'rgba(255, 255, 255, 0.1)',
-                  border: 'none',
-                  borderRadius: '16px',
-                  cursor: isFormValid ? 'pointer' : 'not-allowed',
-                  opacity: isFormValid ? 1 : 0.5
-                }}
-              >
-                Continue to Step 3
-              </motion.button>
+              <div style={{ 
+                display: 'flex', 
+                gap: isMobile ? '8px' : '12px',
+                flex: 1,
+                justifyContent: 'flex-end',
+                flexWrap: isMobile ? 'wrap' : 'nowrap'
+              }}>
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={handleSaveAndExit}
+                  style={{
+                    padding: isMobile ? '14px 20px' : '16px 32px',
+                    fontSize: isMobile ? '14px' : '16px',
+                    fontWeight: '600',
+                    color: '#FFFFFF',
+                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                    border: '2px solid rgba(255, 255, 255, 0.3)',
+                    borderRadius: '16px',
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap'
+                  }}
+                >
+                  Save & Exit
+                </motion.button>
+
+                <motion.button
+                  whileHover={{ scale: isFormValid ? 1.02 : 1 }}
+                  whileTap={{ scale: isFormValid ? 0.98 : 1 }}
+                  onClick={handleContinue}
+                  disabled={!isFormValid}
+                  style={{
+                    padding: isMobile ? '14px 24px' : '16px 48px',
+                    fontSize: isMobile ? '15px' : '16px',
+                    fontWeight: '700',
+                    color: '#FFFFFF',
+                    background: isFormValid
+                      ? 'linear-gradient(135deg, #2497F9 0%, #29BD98 100%)'
+                      : 'rgba(255, 255, 255, 0.1)',
+                    border: 'none',
+                    borderRadius: '16px',
+                    cursor: isFormValid ? 'pointer' : 'not-allowed',
+                    opacity: isFormValid ? 1 : 0.5,
+                    whiteSpace: 'nowrap'
+                  }}
+                >
+                  Continue to Step 3
+                </motion.button>
+              </div>
             </div>
           </div>
         </motion.div>

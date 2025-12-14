@@ -4,19 +4,23 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext';
 import { useProject } from '../../../context/ProjectContext';
 import { useCart } from '../../../context/CartContext';
+import { useLocation } from '../../../context/LocationContext';
 import { useIsMobile } from '../../../hooks/useMediaQuery';
 import { useMultiServiceComplete, useIsMultiService } from '../../../hooks/useMultiService';
 import AssistedToggle from '../../../components/common/AssistedToggle';
 import CartSummary from '../../../components/common/CartSummary';
 import ChipGroup from '../../../components/common/ChipGroup';
 import TimelineSelector from '../../../components/common/TimelineSelector';
+import ProjectEstimateModal from '../../../components/common/ProjectEstimateModal';
+import { calculateProjectEstimate } from '../../../utils/pricingCalculator';
 import logo from '../../../assets/logo.png';
 
 const BackendStep4 = () => {
   const navigate = useNavigate();
   const { currentUser, logout } = useAuth();
   const { projectData, updatePhaseData, submitProject } = useProject();
-  const { hasItem } = useCart();
+  const { hasItem, cart } = useCart();
+  const { location } = useLocation();
   const isMobile = useIsMobile();
   const handleMultiServiceComplete = useMultiServiceComplete('backend');
   const isMultiService = useIsMultiService();
@@ -33,6 +37,8 @@ const BackendStep4 = () => {
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showEstimateModal, setShowEstimateModal] = useState(false);
+  const [estimate, setEstimate] = useState(null);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -40,6 +46,15 @@ const BackendStep4 = () => {
 
   const handleInputChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleSaveAndExit = async () => {
+    await updatePhaseData('backend', {
+      ...projectData?.backend,
+      ...formData,
+      currentStep: 4
+    });
+    navigate('/dashboard');
   };
 
   const handleSubmit = async () => {
@@ -51,7 +66,28 @@ const BackendStep4 = () => {
       if (isMultiService) {
         await handleMultiServiceComplete(serviceData);
       } else {
-        navigate('/project-submitted');
+        // Calculate estimate for single-service mode
+        const countryCode = location?.country || 'US';
+        const timelineMultiplier = formData.timelineMultiplier || 1.0;
+        const calculatedEstimate = calculateProjectEstimate(
+          projectData,
+          countryCode,
+          timelineMultiplier,
+          cart
+        );
+        setEstimate(calculatedEstimate);
+        
+        // Submit project
+        await submitProject();
+        
+        // Block back button
+        window.history.pushState(null, '', window.location.href);
+        window.onpopstate = function() {
+          window.history.pushState(null, '', window.location.href);
+        };
+        
+        // Show estimate modal
+        setShowEstimateModal(true);
       }
     } catch (error) {
       console.error('Submit error:', error);
@@ -430,9 +466,10 @@ const BackendStep4 = () => {
             {/* Navigation */}
             <div style={{
               display: 'flex',
-              gap: '16px',
+              gap: '12px',
               marginTop: '48px',
-              justifyContent: 'space-between'
+              justifyContent: 'space-between',
+              flexWrap: 'wrap'
             }}>
               <button
                 onClick={() => navigate('/onboarding/backend/step3')}
@@ -450,34 +487,64 @@ const BackendStep4 = () => {
                 Back
               </button>
 
-              <motion.button
-                whileHover={{ scale: isFormValid && !isSubmitting ? 1.02 : 1 }}
-                whileTap={{ scale: isFormValid && !isSubmitting ? 0.98 : 1 }}
-                onClick={handleSubmit}
-                disabled={!isFormValid || isSubmitting}
-                style={{
-                  padding: isMobile ? '14px 32px' : '16px 48px',
-                  fontSize: isMobile ? '15px' : '16px',
-                  fontWeight: '700',
-                  color: '#FFFFFF',
-                  background: isFormValid && !isSubmitting
-                    ? 'linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%)'
-                    : 'rgba(255, 255, 255, 0.1)',
-                  border: 'none',
-                  borderRadius: '16px',
-                  cursor: isFormValid && !isSubmitting ? 'pointer' : 'not-allowed',
-                  opacity: isFormValid && !isSubmitting ? 1 : 0.5,
-                  minWidth: '180px'
-                }}
+              <div style={{ display: 'flex', gap: '12px', flex: 1, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={handleSaveAndExit}
+                  style={{
+                    padding: isMobile ? '14px 24px' : '16px 32px',
+                    fontSize: isMobile ? '15px' : '16px',
+                    fontWeight: '600',
+                    color: '#FFFFFF',
+                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                    border: '2px solid rgba(255, 255, 255, 0.3)',
+                    borderRadius: '16px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Save & Exit
+                </motion.button>
+
+                <motion.button
+                  whileHover={{ scale: isFormValid && !isSubmitting ? 1.02 : 1 }}
+                  whileTap={{ scale: isFormValid && !isSubmitting ? 0.98 : 1 }}
+                  onClick={handleSubmit}
+                  disabled={!isFormValid || isSubmitting}
+                  style={{
+                    padding: isMobile ? '14px 32px' : '16px 48px',
+                    fontSize: isMobile ? '15px' : '16px',
+                    fontWeight: '700',
+                    color: '#FFFFFF',
+                    background: isFormValid && !isSubmitting
+                      ? 'linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%)'
+                      : 'rgba(255, 255, 255, 0.1)',
+                    border: 'none',
+                    borderRadius: '16px',
+                    cursor: isFormValid && !isSubmitting ? 'pointer' : 'not-allowed',
+                    opacity: isFormValid && !isSubmitting ? 1 : 0.5,
+                    minWidth: '180px'
+                  }}
               >
                 {isSubmitting ? 'Submitting...' : 'Submit Project'}
               </motion.button>
             </div>
           </div>
+          </div>
         </motion.div>
       </div>
 
       <CartSummary />
+
+      <ProjectEstimateModal
+        isOpen={showEstimateModal}
+        onClose={() => {
+          setShowEstimateModal(false);
+          navigate('/dashboard');
+        }}
+        estimate={estimate}
+        projectData={projectData}
+      />
     </div>
   );
 };

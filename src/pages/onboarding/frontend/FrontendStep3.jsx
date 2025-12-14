@@ -48,6 +48,11 @@ const FrontendStep3 = () => {
     }));
   };
 
+  const handleSaveAndExit = async () => {
+    await updatePhaseData('frontend', { ...projectData.frontend, ...formData, currentStep: 3 });
+    navigate('/dashboard');
+  };
+
   const handleContinue = async () => {
     await updatePhaseData('frontend', { ...projectData.frontend, ...formData });
     navigate('/onboarding/frontend/step4');
@@ -396,16 +401,18 @@ const FrontendStep3 = () => {
               <ChipGroup
                 options={libraryOptions}
                 selected={formData.libraries}
-                onToggle={(item) => toggleItem('libraries', item)}
+                onChange={(newLibraries) => handleInputChange('libraries', newLibraries)}
+                multiple
               />
             </div>
 
             {/* Navigation */}
             <div style={{
               display: 'flex',
-              gap: '16px',
+              gap: isMobile ? '12px' : '16px',
               marginTop: '48px',
-              justifyContent: 'space-between'
+              justifyContent: 'space-between',
+              flexWrap: isMobile ? 'wrap' : 'nowrap'
             }}>
               <button
                 onClick={handleBack}
@@ -423,23 +430,51 @@ const FrontendStep3 = () => {
                 Back
               </button>
 
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={handleContinue}
-                style={{
-                  padding: isMobile ? '14px 32px' : '16px 48px',
-                  fontSize: isMobile ? '15px' : '16px',
-                  fontWeight: '700',
-                  color: '#FFFFFF',
-                  background: 'linear-gradient(135deg, #2497F9 0%, #29BD98 100%)',
-                  border: 'none',
-                  borderRadius: '16px',
-                  cursor: 'pointer'
-                }}
-              >
-                Continue to Step 4
-              </motion.button>
+              <div style={{ 
+                display: 'flex', 
+                gap: isMobile ? '8px' : '12px',
+                flex: 1,
+                justifyContent: 'flex-end',
+                flexWrap: isMobile ? 'wrap' : 'nowrap'
+              }}>
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={handleSaveAndExit}
+                  style={{
+                    padding: isMobile ? '14px 20px' : '16px 32px',
+                    fontSize: isMobile ? '14px' : '16px',
+                    fontWeight: '600',
+                    color: '#FFFFFF',
+                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                    border: '2px solid rgba(255, 255, 255, 0.3)',
+                    borderRadius: '16px',
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap'
+                  }}
+                >
+                  Save & Exit
+                </motion.button>
+
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={handleContinue}
+                  style={{
+                    padding: isMobile ? '14px 24px' : '16px 48px',
+                    fontSize: isMobile ? '15px' : '16px',
+                    fontWeight: '700',
+                    color: '#FFFFFF',
+                    background: 'linear-gradient(135deg, #2497F9 0%, #29BD98 100%)',
+                    border: 'none',
+                    borderRadius: '16px',
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap'
+                  }}
+                >
+                  Continue to Step 4
+                </motion.button>
+              </div>
             </div>
           </div>
         </motion.div>

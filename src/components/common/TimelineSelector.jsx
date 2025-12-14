@@ -228,7 +228,7 @@ const TimelineSelector = ({
               borderRadius: '20px',
               border: `1px solid ${priceImpact.color}40`
             }}>
-              {priceImpact.label} • {getPriceChangeText()}
+              {priceImpact.emoji} {priceImpact.label}
             </div>
           )}
         </div>

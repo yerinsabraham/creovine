@@ -13,7 +13,7 @@ const FrontendStep1 = () => {
   const navigate = useNavigate();
   const { currentUser, logout } = useAuth();
   const { projectData, updatePhaseData } = useProject();
-  const { hasItem } = useCart();
+  const { hasItem, addItem, removeItem, items } = useCart();
   const isMobile = useIsMobile();
 
   // Check for add-ons
@@ -30,12 +30,37 @@ const FrontendStep1 = () => {
     description: projectData?.frontend?.description || ''
   });
 
+  const [frameworkConsultation, setFrameworkConsultation] = useState(
+    items?.some(item => item.id === 'framework-consultation') || false
+  );
+
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
 
+  useEffect(() => {
+    if (frameworkConsultation) {
+      addItem({
+        id: 'framework-consultation',
+        name: 'Framework Consultation',
+        description: 'Expert recommendation on the best framework for your project',
+        price: 15,
+        category: 'Frontend Development'
+      });
+    } else {
+      removeItem('framework-consultation');
+    }
+  }, [frameworkConsultation, addItem, removeItem]);
+
   const handleInputChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleSaveAndExit = async () => {
+    // Save current progress as draft with current step
+    await updatePhaseData('frontend', { ...formData, currentStep: 1 });
+    // Navigate to dashboard
+    navigate('/dashboard');
   };
 
   const handleContinue = async () => {
@@ -54,7 +79,7 @@ const FrontendStep1 = () => {
 
   // Validation
   const isTypeValid = formData.projectType.trim();
-  const isFrameworkValid = formData.framework.trim();
+  const isFrameworkValid = formData.framework.trim() || frameworkConsultation;
   const isDescriptionValid = formData.description.trim() || hasItem('project-scope-assist');
   
   const isFormValid = isTypeValid && isFrameworkValid && isDescriptionValid;
@@ -272,6 +297,22 @@ const FrontendStep1 = () => {
               }}>
                 What framework/library do you prefer? *
               </label>
+
+              {/* Use AssistedToggle with legacy pattern */}
+              <AssistedToggle
+                id="framework-consultation"
+                category="Frontend Development"
+                label="What framework/library do you prefer?"
+                assistedLabel="Help me choose the best framework"
+                tooltipText="Not sure which framework to use? Our experts will analyze your project requirements and recommend the most suitable framework for your needs."
+                price={15}
+                defaultEnabled={frameworkConsultation}
+                onChange={(isAssisted) => setFrameworkConsultation(isAssisted)}
+                theme="dark"
+              />
+
+              {/* Only show framework selection if they chose 'I will provide' */}
+              {!frameworkConsultation && (
                 <select
                   value={formData.framework}
                   onChange={(e) => handleInputChange('framework', e.target.value)}
@@ -295,6 +336,7 @@ const FrontendStep1 = () => {
                     </option>
                   ))}
                 </select>
+              )}
             </div>
 
             {/* Current State (for existing projects) */}
@@ -407,9 +449,10 @@ const FrontendStep1 = () => {
             {/* Navigation */}
             <div style={{
               display: 'flex',
-              gap: '16px',
+              gap: isMobile ? '12px' : '16px',
               marginTop: '48px',
-              justifyContent: 'space-between'
+              justifyContent: 'space-between',
+              flexWrap: isMobile ? 'wrap' : 'nowrap'
             }}>
               <button
                 onClick={() => navigate('/get-started')}
@@ -427,27 +470,57 @@ const FrontendStep1 = () => {
                 Back
               </button>
 
-              <motion.button
-                whileHover={{ scale: isFormValid ? 1.02 : 1 }}
-                whileTap={{ scale: isFormValid ? 0.98 : 1 }}
-                onClick={handleContinue}
-                disabled={!isFormValid}
-                style={{
-                  padding: isMobile ? '14px 32px' : '16px 48px',
-                  fontSize: isMobile ? '15px' : '16px',
-                  fontWeight: '700',
-                  color: '#FFFFFF',
-                  background: isFormValid
-                    ? 'linear-gradient(135deg, #2497F9 0%, #29BD98 100%)'
-                    : 'rgba(255, 255, 255, 0.1)',
-                  border: 'none',
-                  borderRadius: '16px',
-                  cursor: isFormValid ? 'pointer' : 'not-allowed',
-                  opacity: isFormValid ? 1 : 0.5
-                }}
-              >
-                Continue to Step 2
-              </motion.button>
+              <div style={{ 
+                display: 'flex', 
+                gap: isMobile ? '8px' : '12px',
+                flex: 1,
+                justifyContent: 'flex-end',
+                flexWrap: isMobile ? 'wrap' : 'nowrap'
+              }}>
+                {/* Save & Continue Later */}
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={handleSaveAndExit}
+                  style={{
+                    padding: isMobile ? '14px 20px' : '16px 32px',
+                    fontSize: isMobile ? '14px' : '16px',
+                    fontWeight: '600',
+                    color: '#FFFFFF',
+                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                    border: '2px solid rgba(255, 255, 255, 0.3)',
+                    borderRadius: '16px',
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap'
+                  }}
+                >
+                  Save & Exit
+                </motion.button>
+
+                {/* Continue Button */}
+                <motion.button
+                  whileHover={{ scale: isFormValid ? 1.02 : 1 }}
+                  whileTap={{ scale: isFormValid ? 0.98 : 1 }}
+                  onClick={handleContinue}
+                  disabled={!isFormValid}
+                  style={{
+                    padding: isMobile ? '14px 24px' : '16px 48px',
+                    fontSize: isMobile ? '15px' : '16px',
+                    fontWeight: '700',
+                    color: '#FFFFFF',
+                    background: isFormValid
+                      ? 'linear-gradient(135deg, #2497F9 0%, #29BD98 100%)'
+                      : 'rgba(255, 255, 255, 0.1)',
+                    border: 'none',
+                    borderRadius: '16px',
+                    cursor: isFormValid ? 'pointer' : 'not-allowed',
+                    opacity: isFormValid ? 1 : 0.5,
+                    whiteSpace: 'nowrap'
+                  }}
+                >
+                  Continue to Step 2
+                </motion.button>
+              </div>
             </div>
           </div>
         </motion.div>

@@ -39,6 +39,15 @@ const BackendStep2 = () => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
+  const handleSaveAndExit = async () => {
+    await updatePhaseData('backend', {
+      ...projectData?.backend,
+      ...formData,
+      currentStep: 2
+    });
+    navigate('/dashboard');
+  };
+
   const handleContinue = async () => {
     await updatePhaseData('backend', {
       ...projectData?.backend,
@@ -467,9 +476,10 @@ const BackendStep2 = () => {
             {/* Navigation */}
             <div style={{
               display: 'flex',
-              gap: '16px',
+              gap: '12px',
               marginTop: '48px',
-              justifyContent: 'space-between'
+              justifyContent: 'space-between',
+              flexWrap: 'wrap'
             }}>
               <button
                 onClick={() => navigate('/onboarding/backend/step1')}
@@ -487,28 +497,48 @@ const BackendStep2 = () => {
                 Back
               </button>
 
-              <motion.button
-                whileHover={{ scale: isFormValid ? 1.02 : 1 }}
-                whileTap={{ scale: isFormValid ? 0.98 : 1 }}
-                onClick={handleContinue}
-                disabled={!isFormValid}
-                style={{
-                  padding: isMobile ? '14px 32px' : '16px 48px',
-                  fontSize: isMobile ? '15px' : '16px',
-                  fontWeight: '700',
-                  color: '#FFFFFF',
-                  background: isFormValid
-                    ? 'linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%)'
-                    : 'rgba(255, 255, 255, 0.1)',
-                  border: 'none',
-                  borderRadius: '16px',
-                  cursor: isFormValid ? 'pointer' : 'not-allowed',
-                  opacity: isFormValid ? 1 : 0.5
-                }}
+              <div style={{ display: 'flex', gap: '12px', flex: 1, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={handleSaveAndExit}
+                  style={{
+                    padding: isMobile ? '14px 24px' : '16px 32px',
+                    fontSize: isMobile ? '15px' : '16px',
+                    fontWeight: '600',
+                    color: '#FFFFFF',
+                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                    border: '2px solid rgba(255, 255, 255, 0.3)',
+                    borderRadius: '16px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Save & Exit
+                </motion.button>
+
+                <motion.button
+                  whileHover={{ scale: isFormValid ? 1.02 : 1 }}
+                  whileTap={{ scale: isFormValid ? 0.98 : 1 }}
+                  onClick={handleContinue}
+                  disabled={!isFormValid}
+                  style={{
+                    padding: isMobile ? '14px 32px' : '16px 48px',
+                    fontSize: isMobile ? '15px' : '16px',
+                    fontWeight: '700',
+                    color: '#FFFFFF',
+                    background: isFormValid
+                      ? 'linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%)'
+                      : 'rgba(255, 255, 255, 0.1)',
+                    border: 'none',
+                    borderRadius: '16px',
+                    cursor: isFormValid ? 'pointer' : 'not-allowed',
+                    opacity: isFormValid ? 1 : 0.5
+                  }}
               >
                 Continue to Step 3
               </motion.button>
             </div>
+          </div>
           </div>
         </motion.div>
       </div>

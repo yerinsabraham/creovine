@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 
 const CartContext = createContext();
 
@@ -20,7 +20,7 @@ export const CartProvider = ({ children }) => {
     setTotal(newTotal);
   }, [cartItems]);
 
-  const addItem = (item) => {
+  const addItem = useCallback((item) => {
     // item structure: { id, category, label, price, description }
     setCartItems(prev => {
       // Check if item already exists
@@ -30,25 +30,25 @@ export const CartProvider = ({ children }) => {
       }
       return [...prev, item];
     });
-  };
+  }, []);
 
-  const removeItem = (itemId) => {
+  const removeItem = useCallback((itemId) => {
     setCartItems(prev => prev.filter(item => item.id !== itemId));
-  };
+  }, []);
 
-  const updateItem = (itemId, updates) => {
+  const updateItem = useCallback((itemId, updates) => {
     setCartItems(prev => prev.map(item => 
       item.id === itemId ? { ...item, ...updates } : item
     ));
-  };
+  }, []);
 
-  const clearCart = () => {
+  const clearCart = useCallback(() => {
     setCartItems([]);
-  };
+  }, []);
 
-  const hasItem = (itemId) => {
+  const hasItem = useCallback((itemId) => {
     return cartItems.some(item => item.id === itemId);
-  };
+  }, [cartItems]);
 
   const getItemsByCategory = (category) => {
     return cartItems.filter(item => item.category === category);

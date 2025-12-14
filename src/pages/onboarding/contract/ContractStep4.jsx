@@ -3,16 +3,20 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useProject } from '../../../context/ProjectContext';
 import { useCart } from '../../../context/CartContext';
+import { useLocation } from '../../../context/LocationContext';
 import { useMultiServiceComplete, useIsMultiService } from '../../../hooks/useMultiService';
 import ChipGroup from '../../../components/common/ChipGroup';
 import AssistedToggle from '../../../components/common/AssistedToggle';
 import CartSummary from '../../../components/common/CartSummary';
 import TimelineSelector from '../../../components/common/TimelineSelector';
+import ProjectEstimateModal from '../../../components/common/ProjectEstimateModal';
+import { calculateProjectEstimate } from '../../../utils/pricingCalculator';
 
 const ContractStep4 = () => {
   const navigate = useNavigate();
-  const { projectData, updateProjectData } = useProject();
-  const { addItem, removeItem, items } = useCart();
+  const { projectData, updateProjectData, submitProject } = useProject();
+  const { addItem, removeItem, items, cart } = useCart();
+  const { location } = useLocation();
   const handleMultiServiceComplete = useMultiServiceComplete('smart-contract');
   const isMultiService = useIsMultiService();
   
@@ -27,6 +31,8 @@ const ContractStep4 = () => {
   const [timeline, setTimeline] = useState(projectData?.contract?.timeline || { amount: 7, unit: 'days' });
   const [timelineMultiplier, setTimelineMultiplier] = useState(projectData?.contract?.timelineMultiplier || 1.0);
   const [additionalNotes, setAdditionalNotes] = useState(projectData?.contract?.additionalNotes || '');
+  const [showEstimateModal, setShowEstimateModal] = useState(false);
+  const [estimate, setEstimate] = useState(null);
   
   // Assisted toggles
   const [auditAssist, setAuditAssist] = useState(
@@ -104,7 +110,27 @@ const ContractStep4 = () => {
       if (isMultiService) {
         await handleMultiServiceComplete(serviceData);
       } else {
-        navigate('/quote');
+        // Calculate estimate for single-service mode
+        const countryCode = location?.country || 'US';
+        const calculatedEstimate = calculateProjectEstimate(
+          projectData,
+          countryCode,
+          timelineMultiplier,
+          cart
+        );
+        setEstimate(calculatedEstimate);
+        
+        // Submit project
+        await submitProject();
+        
+        // Block back button
+        window.history.pushState(null, '', window.location.href);
+        window.onpopstate = function() {
+          window.history.pushState(null, '', window.location.href);
+        };
+        
+        // Show estimate modal
+        setShowEstimateModal(true);
       }
     } catch (error) {
       console.error('Submit error:', error);
@@ -307,6 +333,16 @@ const ContractStep4 = () => {
         {/* Cart Summary Sidebar */}
         <CartSummary />
       </div>
+
+      <ProjectEstimateModal
+        isOpen={showEstimateModal}
+        onClose={() => {
+          setShowEstimateModal(false);
+          navigate('/dashboard');
+        }}
+        estimate={estimate}
+        projectData={projectData}
+      />
     </div>
   );
 };

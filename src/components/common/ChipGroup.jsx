@@ -54,13 +54,15 @@ const ChipGroup = ({
         flexWrap: 'wrap',
         gap: isMobile ? '8px' : '12px'
       }}>
-        {options.map((option) => {
-          const value = option.id || option.value;
+        {options.map((option, index) => {
+          // Handle both string arrays and object arrays
+          const value = typeof option === 'string' ? option : (option.id || option.value);
+          const label = typeof option === 'string' ? option : option.label;
           const chipSelected = isSelected(value);
           
           return (
             <motion.button
-              key={value}
+              key={value || index}
               onClick={() => handleSelect(value)}
               whileHover={{ scale: 1.03 }}
               whileTap={{ scale: 0.97 }}
@@ -81,7 +83,7 @@ const ChipGroup = ({
               }}
             >
               {chipSelected && <FaCheck style={{ fontSize: '12px' }} />}
-              {option.label}
+              {label}
             </motion.button>
           );
         })}
