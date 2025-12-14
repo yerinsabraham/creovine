@@ -60,7 +60,9 @@ export const CartProvider = ({ children }) => {
 
   const clearCart = useCallback(() => {
     setCartItems([]);
-  }, [])updateCurrency = useCallback((newCountryCode) => {
+  }, []);
+
+  const updateCurrency = useCallback((newCountryCode) => {
     setCountryCode(newCountryCode);
     const localizedPrice = getLocalizedPrice(100, newCountryCode);
     setCurrency(localizedPrice.currency);
@@ -81,6 +83,14 @@ export const CartProvider = ({ children }) => {
     return localizedTotal.formatted;
   }, [total, countryCode]);
 
+  const hasItem = useCallback((itemId) => {
+    return cartItems.some(item => item.id === itemId);
+  }, [cartItems]);
+
+  const getItemsByCategory = (category) => {
+    return cartItems.filter(item => item.category === category);
+  };
+
   const value = {
     cartItems,
     total,
@@ -94,16 +104,6 @@ export const CartProvider = ({ children }) => {
     getItemsByCategory,
     updateCurrency,
     getTotalFormatted
-
-  const value = {
-    cartItems,
-    total,
-    addItem,
-    removeItem,
-    updateItem,
-    clearCart,
-    hasItem,
-    getItemsByCategory
   };
 
   return (
